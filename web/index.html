@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Afet Koordinasyon Paneli</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Afet Koordinasyon Paneli</h1>
+  <span id="durum" class="durum kopuk">Bağlantı yok</span>
+  <span id="saat" class="saat"></span>
+</header>
+<main>
+  <section id="p-izleme" class="panel">
+    <h2>Canlı İzleme <span class="ek">Kamera 1</span></h2>
+    <div class="icerik"><canvas id="kamera"></canvas></div>
+  </section>
+  <section id="p-harita" class="panel">
+    <h2>Harita <span class="ek" id="harita-ozet"></span></h2>
+    <div class="icerik"><div id="harita"></div></div>
+  </section>
+  <section id="p-olaylar" class="panel">
+    <h2>Olaylar <span class="ek" id="olay-sayisi">0</span></h2>
+    <div class="icerik kaydir"><table class="liste"><thead><tr><th>Saat</th><th>Tür</th><th>Kaynak</th><th class="sag">Güven</th><th class="sag">Adet</th></tr></thead><tbody id="olaylar"></tbody></table></div>
+  </section>
+  <section id="p-mesajlar" class="panel">
+    <h2>Mesajlar</h2>
+    <div class="icerik dikey">
+      <div class="dugmeler">
+        <button data-yuk="Enkaz altındayım">Enkaz altındayım</button>
+        <button data-yuk="Yaralı var">Yaralı var</button>
+        <button data-yuk="Güvendeyim">Güvendeyim</button>
+        <button id="sos" class="sos">SOS Gönder</button>
+      </div>
+      <div id="gonderim" class="gonderim"></div>
+      <div class="kaydir"><table class="liste"><thead><tr><th>Saat</th><th>Kaynak</th><th>Tür</th><th>Mesaj</th></tr></thead><tbody id="mesajlar"></tbody></table></div>
+    </div>
+  </section>
+  <section id="p-sinyal" class="panel">
+    <h2>Sinyal <span class="ek">Düğüm başına son ölçüm</span></h2>
+    <div class="icerik ikili">
+      <div class="grafik"><h3>RSSI (dBm)</h3><div class="tuval"><canvas id="g-rssi"></canvas></div></div>
+      <div class="grafik"><h3>Paket alım oranı (%)</h3><div class="tuval"><canvas id="g-oran"></canvas></div></div>
+    </div>
+  </section>
+</main>
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="vendor/chartjs/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

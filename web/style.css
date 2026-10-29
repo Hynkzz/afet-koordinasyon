@@ -1,0 +1,136 @@
+:root {
+  --zemin: #121417;
+  --panel: #1a1d21;
+  --cizgi: #2c3036;
+  --yazi: #e3e5e8;
+  --yazi-2: #9aa0a8;
+  --yazi-3: #6b7178;
+  --notr: #7d848d;
+  --kritik: #e5484d;
+  --kritik-zemin: #3a1d1f;
+  --uyari: #f0a33a;
+  --normal: #46a758;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  background: var(--zemin);
+  color: var(--yazi);
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cizgi);
+}
+
+h1 { font-size: 15px; font-weight: 600; margin: 0; flex: 1; }
+
+.durum { padding: 2px 8px; border: 1px solid; border-radius: 3px; font-size: 12px; }
+.durum.bagli { color: var(--normal); }
+.durum.kopuk { color: var(--kritik); }
+.saat { color: var(--yazi-2); font-variant-numeric: tabular-nums; }
+
+main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1.1fr;
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas: "izleme harita olaylar" "mesajlar sinyal olaylar";
+  gap: 8px;
+  padding: 8px;
+}
+
+#p-izleme { grid-area: izleme; }
+#p-harita { grid-area: harita; }
+#p-olaylar { grid-area: olaylar; }
+#p-mesajlar { grid-area: mesajlar; }
+#p-sinyal { grid-area: sinyal; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--cizgi);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+h2 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--yazi-2);
+  margin: 0;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--cizgi);
+  display: flex;
+  justify-content: space-between;
+}
+
+h2 .ek { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--yazi-3); }
+h3 { font-size: 12px; font-weight: 400; color: var(--yazi-2); margin: 0 0 4px; }
+
+.icerik { flex: 1; min-height: 0; position: relative; }
+.kaydir { overflow-y: auto; }
+.dikey { display: flex; flex-direction: column; }
+.dikey .kaydir { flex: 1; min-height: 0; }
+.ikili { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 8px 10px; }
+.grafik { display: flex; flex-direction: column; min-height: 0; }
+.tuval { flex: 1; min-height: 0; position: relative; }
+
+#kamera, #harita { position: absolute; inset: 0; width: 100%; height: 100%; }
+#harita { background: var(--zemin); }
+
+.liste { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.liste th {
+  position: sticky; top: 0;
+  background: var(--panel);
+  text-align: left; font-weight: 400; color: var(--yazi-3);
+  padding: 4px 8px; border-bottom: 1px solid var(--cizgi);
+}
+.liste td { padding: 4px 8px; border-bottom: 1px solid var(--cizgi); white-space: nowrap; }
+.liste td.metin { white-space: normal; }
+.sag { text-align: right; }
+
+.etiket { display: inline-block; padding: 0 6px; border-radius: 3px; font-size: 12px; border: 1px solid; }
+.etiket.insan { color: var(--zemin); background: var(--uyari); border-color: var(--uyari); }
+.etiket.vurus { color: var(--uyari); }
+.etiket.sos { color: #fff; background: var(--kritik); border-color: var(--kritik); font-weight: 600; }
+.etiket.mesaj { color: var(--yazi-2); }
+
+tr.sos td { background: var(--kritik-zemin); font-weight: 600; }
+tr.sos td:first-child { box-shadow: inset 3px 0 0 var(--kritik); }
+
+.dugmeler { display: grid; grid-template-columns: repeat(3, 1fr) 1.2fr; gap: 6px; padding: 8px 10px; }
+
+button {
+  font: inherit;
+  color: var(--yazi);
+  background: #24282d;
+  border: 1px solid var(--cizgi);
+  border-radius: 3px;
+  padding: 7px 6px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--notr); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.sos { background: var(--kritik); border-color: var(--kritik); color: #fff; font-weight: 600; }
+button.sos:hover { border-color: #fff; }
+
+.gonderim { padding: 0 10px 6px; color: var(--yazi-2); min-height: 1.4em; font-size: 12px; }
+.gonderim.hata { color: var(--kritik); }
+
+.leaflet-container { font: inherit; }
+.leaflet-popup-content { margin: 8px 10px; }

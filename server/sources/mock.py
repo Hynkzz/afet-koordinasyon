@@ -78,8 +78,8 @@ class MockKaynak(Kaynak):
         while True:
             for d in DUGUMLER:
                 rssi[d] = min(max(rssi[d] + random.uniform(-2, 2), -100), -40)
-                # Zayif sinyalde kayip artar: -40 dBm'de ~%99, -100 dBm'de ~%40.
-                oran = 0.99 - (-40 - rssi[d]) / 60 * 0.59 + random.uniform(-0.03, 0.03)
+                # -65 dBm'e kadar kayip yok denecek kadar az; altinda hizla artar, -100 dBm'de ~%40.
+                oran = 0.99 - max(0, -65 - rssi[d]) / 35 * 0.59 + random.uniform(-0.03, 0.01)
                 await gonder(Sinyal(
                     dugum_id=d, rssi=round(rssi[d], 1),
                     paket_alim_orani=round(min(max(oran, 0), 1), 3), zaman=simdi(),

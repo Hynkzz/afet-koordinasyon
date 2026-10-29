@@ -1,0 +1,300 @@
+"use strict";
+
+const renk = Object.fromEntries(
+  ["yazi-2", "yazi-3", "cizgi", "notr", "kritik", "uyari", "normal", "panel"].map(
+    (ad) => [ad, getComputedStyle(document.documentElement).getPropertyValue("--" + ad).trim()]
+  )
+);
+const EN_FAZLA_SATIR = 200;
+const KUTU_OMRU_MS = 1500;
+
+function saatYaz(zaman) {
+  return new Date(zaman).toLocaleTimeString("tr-TR", { hour12: false });
+}
+
+function hucre(satir, metin, sinif) {
+  const td = satir.insertCell();
+  if (metin instanceof Node) td.append(metin);
+  else td.textContent = metin;
+  if (sinif) td.className = sinif;
+  return td;
+}
+
+function etiket(metin, sinif) {
+  const s = document.createElement("span");
+  s.className = "etiket " + sinif;
+  s.textContent = metin;
+  return s;
+}
+
+function satirSinirla(tbody) {
+  while (tbody.rows.length > EN_FAZLA_SATIR) tbody.deleteRow(-1);
+}
+
+// --- Saat ---
+const saat = document.getElementById("saat");
+setInterval(() => (saat.textContent = new Date().toLocaleString("tr-TR", { hour12: false })), 1000);
+
+// --- Olay listesi ---
+const olaylar = document.getElementById("olaylar");
+const olaySatirlari = new Map();
+const olaySayisi = document.getElementById("olay-sayisi");
+
+function olaySatiri(id, doldur, sos) {
+  // Birlesen olay ayni satiri gunceller ve en uste tasinir; liste "en son ne oldu" sorusunu cevaplasin.
+  let satir = olaySatirlari.get(id);
+  if (satir) satir.remove();
+  satir = document.createElement("tr");
+  if (sos) satir.className = "sos";
+  doldur(satir);
+  olaylar.prepend(satir);
+  olaySatirlari.set(id, satir);
+  satirSinirla(olaylar);
+  for (const [anahtar, s] of olaySatirlari) if (!s.isConnected) olaySatirlari.delete(anahtar);
+  olaySayisi.textContent = olaylar.rows.length;
+}
+
+function olayAl(olay) {
+  const ad = olay.etiket === "insan" ? "İnsan" : "Vuruş";
+  olaySatiri(olay.olay_id, (s) => {
+    hucre(s, saatYaz(olay.zaman));
+    hucre(s, etiket(ad, olay.etiket));
+    hucre(s, olay.kaynak === "kamera" ? "Kamera" : "Mikrofon");
+    hucre(s, olay.guven.toFixed(2), "sag");
+    hucre(s, olay.adet, "sag");
+  });
+  if (olay.kutu) kutular.set(olay.olay_id, { ...olay, alindi: performance.now() });
+}
+
+// --- Canli izleme ---
+const kamera = document.getElementById("kamera");
+const ciz = kamera.getContext("2d");
+const kutular = new Map();
+
+function kameraCiz() {
+  const olcek = window.devicePixelRatio || 1;
+  const w = kamera.clientWidth, h = kamera.clientHeight;
+  if (kamera.width !== Math.round(w * olcek) || kamera.height !== Math.round(h * olcek)) {
+    kamera.width = Math.round(w * olcek);
+    kamera.height = Math.round(h * olcek);
+  }
+  ciz.setTransform(olcek, 0, 0, olcek, 0, 0);
+  ciz.fillStyle = "#0d0f11";
+  ciz.fillRect(0, 0, w, h);
+
+  ciz.strokeStyle = renk.cizgi;
+  ciz.lineWidth = 1;
+  for (let i = 1; i < 4; i++) {
+    ciz.beginPath(); ciz.moveTo((w * i) / 4, 0); ciz.lineTo((w * i) / 4, h); ciz.stroke();
+    ciz.beginPath(); ciz.moveTo(0, (h * i) / 4); ciz.lineTo(w, (h * i) / 4); ciz.stroke();
+  }
+  ciz.font = "12px system-ui, sans-serif";
+  ciz.fillStyle = renk["yazi-3"];
+  ciz.fillText("Görüntü yok (yer tutucu)", 10, h - 10);
+  ciz.fillText(new Date().toLocaleTimeString("tr-TR", { hour12: false }), w - 70, 18);
+
+  const simdi = performance.now();
+  for (const [id, o] of kutular) {
+    if (simdi - o.alindi > KUTU_OMRU_MS) { kutular.delete(id); continue; }
+    const k = o.kutu;
+    ciz.strokeStyle = renk.uyari;
+    ciz.lineWidth = 2;
+    ciz.strokeRect(k.x * w, k.y * h, k.w * w, k.h * h);
+    const yazi = "insan " + o.guven.toFixed(2);
+    ciz.fillStyle = renk.uyari;
+    ciz.fillRect(k.x * w - 1, k.y * h - 17, ciz.measureText(yazi).width + 8, 16);
+    ciz.fillStyle = "#121417";
+    ciz.fillText(yazi, k.x * w + 3, k.y * h - 5);
+  }
+  requestAnimationFrame(kameraCiz);
+}
+requestAnimationFrame(kameraCiz);
+
+// --- Harita ---
+const harita = L.map("harita", { zoomControl: true }).setView([38.419, 27.134], 15);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: "&copy; OpenStreetMap katkıcıları",
+}).addTo(harita);
+let mesajNoktasi = 0;
+
+function popup(satirlar) {
+  const div = document.createElement("div");
+  for (const [baslik, metin] of satirlar) {
+    const p = document.createElement("div");
+    if (baslik) {
+      const b = document.createElement("b");
+      b.textContent = baslik;
+      p.append(b);
+    } else p.textContent = metin;
+    div.append(p);
+  }
+  return div;
+}
+
+fetch("/api/siginaklar")
+  .then((c) => c.json())
+  .then((veri) => {
+    for (const f of veri.features) {
+      const [lon, lat] = f.geometry.coordinates;
+      const p = f.properties;
+      L.circleMarker([lat, lon], { radius: 7, color: "#fff", weight: 2, fillColor: renk.notr, fillOpacity: 1 })
+        .bindPopup(popup([[p.ad], [null, "Kapasite: " + p.kapasite + " kişi"], [null, "Kaynak: " + p.kaynak]]))
+        .addTo(harita);
+    }
+    haritaOzet(veri.features.length);
+  });
+
+function haritaOzet(siginak) {
+  if (siginak !== undefined) haritaOzet.siginak = siginak;
+  document.getElementById("harita-ozet").textContent =
+    (haritaOzet.siginak ?? 0) + " sığınak, " + mesajNoktasi + " konumlu mesaj";
+}
+
+function haritayaMesaj(m) {
+  const sos = m.tur === "SOS";
+  L.circleMarker([m.gps.lat, m.gps.lon], {
+    radius: sos ? 8 : 6, color: sos ? renk.kritik : renk["yazi-2"], weight: 2,
+    fillColor: sos ? renk.kritik : renk.panel, fillOpacity: sos ? 0.9 : 0.8,
+  })
+    .bindPopup(popup([[sos ? "SOS" : "Mesaj"], [null, m.yuk], [null, m.kaynak + ", " + new Date().toLocaleTimeString("tr-TR", { hour12: false })]]))
+    .addTo(harita);
+  mesajNoktasi++;
+  haritaOzet();
+}
+
+// --- Mesajlar ---
+const mesajlar = document.getElementById("mesajlar");
+const TUR_ADI = { SOS: "SOS", hazir_mesaj: "Hazır mesaj", ack: "Onay" };
+const kaynakAdi = (k) => (k === "merkez" ? "Merkez (gönderildi)" : k);
+
+function mesajAl(m) {
+  const sos = m.tur === "SOS";
+  // Mesajda alinma zamani yok; panelin gordugu an yaziliyor.
+  const zaman = new Date();
+  const s = mesajlar.insertRow(0);
+  if (sos) s.className = "sos";
+  hucre(s, saatYaz(zaman));
+  hucre(s, kaynakAdi(m.kaynak));
+  hucre(s, etiket(TUR_ADI[m.tur], sos ? "sos" : "mesaj"));
+  hucre(s, m.yuk, "metin");
+  satirSinirla(mesajlar);
+
+  if (sos) {
+    olaySatiri("mesaj-" + m.id, (r) => {
+      hucre(r, saatYaz(zaman));
+      hucre(r, etiket("SOS", "sos"));
+      hucre(r, kaynakAdi(m.kaynak));
+      hucre(r, m.yuk);
+      r.lastChild.colSpan = 2;
+    }, true);
+  }
+  if (m.gps) haritayaMesaj(m);
+}
+
+const gonderim = document.getElementById("gonderim");
+const dugmeler = document.querySelectorAll(".dugmeler button");
+
+async function mesajGonder(tur, yuk) {
+  dugmeler.forEach((d) => (d.disabled = true));
+  gonderim.className = "gonderim";
+  gonderim.textContent = "Gönderiliyor...";
+  try {
+    const cevap = await fetch("/api/mesaj", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tur, yuk }),
+    });
+    if (!cevap.ok) throw new Error("sunucu " + cevap.status + " döndü");
+    const m = await cevap.json();
+    gonderim.textContent = saatYaz(new Date()) + " gönderildi: " + yuk + " (" + m.id + ")";
+  } catch (hata) {
+    gonderim.className = "gonderim hata";
+    gonderim.textContent = "Gönderilemedi: " + hata.message;
+  } finally {
+    dugmeler.forEach((d) => (d.disabled = false));
+  }
+}
+
+for (const d of document.querySelectorAll(".dugmeler button[data-yuk]")) {
+  d.addEventListener("click", () => mesajGonder("hazir_mesaj", d.dataset.yuk));
+}
+document.getElementById("sos").addEventListener("click", () => mesajGonder("SOS", "Yardım gerekiyor"));
+
+// --- Sinyal ---
+// Renk durumu anlatir: esigin altindaki dugum turuncu/kirmizi, digerleri gri.
+const ESIK = { rssi: [-85, -95], oran: [80, 60] };
+const sinyaller = new Map();
+Chart.defaults.color = renk["yazi-2"];
+Chart.defaults.font.family = "system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+
+function grafik(id, min, max, adim) {
+  return new Chart(document.getElementById(id), {
+    type: "bar",
+    data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 2, barPercentage: 0.7 }] },
+    options: {
+      indexAxis: "y",
+      animation: false,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { displayColors: false } },
+      scales: {
+        x: { min, max, ticks: { stepSize: adim }, grid: { color: renk.cizgi }, border: { display: false } },
+        y: { grid: { display: false }, border: { color: renk.cizgi } },
+      },
+    },
+  });
+}
+
+const gRssi = grafik("g-rssi", -110, -30, 20);
+const gOran = grafik("g-oran", 0, 100, 20);
+
+function durumRengi(deger, [uyari, kritik]) {
+  if (deger <= kritik) return renk.kritik;
+  if (deger <= uyari) return renk.uyari;
+  return renk.notr;
+}
+
+function grafikleriGuncelle() {
+  const dugumler = [...sinyaller.keys()].sort();
+  const rssi = dugumler.map((d) => sinyaller.get(d).rssi);
+  const oran = dugumler.map((d) => Math.round(sinyaller.get(d).paket_alim_orani * 100));
+  for (const [g, veri, esik] of [[gRssi, rssi, ESIK.rssi], [gOran, oran, ESIK.oran]]) {
+    g.data.labels = dugumler;
+    // RSSI negatif; cubuk eksenin solundan baslasin diye taban en alt degerde.
+    g.data.datasets[0].data = g === gRssi ? veri.map((v) => [-110, v]) : veri;
+    g.data.datasets[0].backgroundColor = veri.map((v) => durumRengi(v, esik));
+    g.update();
+  }
+}
+gRssi.options.plugins.tooltip.callbacks = { label: (b) => b.raw[1] + " dBm" };
+gOran.options.plugins.tooltip.callbacks = { label: (b) => "%" + b.raw };
+// Sinyal saniyede dugum basina bir kez gelir; her pakette degil saniyede bir cizmek yeterli.
+setInterval(() => sinyaller.size && grafikleriGuncelle(), 1000);
+
+// --- WebSocket ---
+const durum = document.getElementById("durum");
+let bekleme = 1000;
+
+function baglan() {
+  const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
+  ws.onopen = () => {
+    bekleme = 1000;
+    durum.className = "durum bagli";
+    durum.textContent = "Bağlı";
+  };
+  ws.onmessage = (e) => {
+    const { tip, veri } = JSON.parse(e.data);
+    if (tip === "olay") olayAl(veri);
+    else if (tip === "mesaj") mesajAl(veri);
+    else if (tip === "sinyal") sinyaller.set(veri.dugum_id, veri);
+  };
+  ws.onclose = () => {
+    durum.className = "durum kopuk";
+    durum.textContent = "Bağlantı yok, " + Math.round(bekleme / 1000) + " sn sonra yeniden denenecek";
+    setTimeout(baglan, bekleme);
+    // Sunucu uzun sure kapaliysa tarayici saniyede bir denemesin.
+    bekleme = Math.min(bekleme * 2, 10000);
+  };
+}
+baglan();
