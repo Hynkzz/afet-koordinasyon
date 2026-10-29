@@ -65,7 +65,7 @@ class OlayBirlestirici:
             kayit = onceki[1]
             kayit["adet"] += 1
             kayit["guven"] = max(kayit["guven"], olay.guven)
-            kayit["zaman"] = olay.zaman.isoformat()
+            kayit["zaman"] = olay.model_dump(mode="json")["zaman"]
             if olay.kutu:
                 kayit["kutu"] = olay.kutu.model_dump()
         else:

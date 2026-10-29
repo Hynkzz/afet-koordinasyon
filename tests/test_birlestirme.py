@@ -59,3 +59,10 @@ def test_sure_son_gorulmeden_sayilir():
         kayit = b.ekle(olay(no))
     assert kayit["olay_id"] == "o0"
     assert kayit["adet"] == 5
+
+
+def test_birlesen_olayin_zaman_bicimi_degismez():
+    b = OlayBirlestirici(saat=Saat())
+    ilk = dict(b.ekle(olay(1)))
+    ikinci = b.ekle(olay(2))
+    assert ilk["zaman"][-1] == ikinci["zaman"][-1]
