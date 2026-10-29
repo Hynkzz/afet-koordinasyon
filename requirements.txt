@@ -2,6 +2,7 @@ fastapi
 uvicorn[standard]
 cryptography
 msgpack
+numpy
 
 # testler icin
 pytest
