@@ -134,3 +134,15 @@ button.sos:hover { border-color: #fff; }
 
 .leaflet-container { font: inherit; }
 .leaflet-popup-content { margin: 8px 10px; }
+
+button.kucuk { padding: 1px 8px; font-size: 11px; text-transform: none; letter-spacing: 0; }
+
+.etiket.asilsiz { color: var(--yazi-3); border-color: var(--yazi-3); }
+tr.asilsiz td { color: var(--yazi-3); text-decoration: line-through; }
+tr.asilsiz td:last-child { text-decoration: none; }
+
+dialog { background: var(--panel); color: var(--yazi); border: 1px solid var(--cizgi); border-radius: 4px; padding: 0 0 12px; }
+dialog::backdrop { background: rgb(0 0 0 / 0.6); }
+dialog p, dialog form { margin: 8px 16px; }
+#qr { display: inline-block; background: #fff; margin: 12px 16px 0; line-height: 0; }
+#qr-adres { font-family: ui-monospace, monospace; }

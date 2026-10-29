@@ -227,6 +227,87 @@ for (const d of document.querySelectorAll(".dugmeler button[data-yuk]")) {
 }
 document.getElementById("sos").addEventListener("click", () => mesajGonder("SOS", "Yardım gerekiyor"));
 
+// --- Portal ---
+const PORTAL_DURUM = { enkaz: "Enkaz altında", yarali: "Yaralı var", guvende: "Güvende", baska: "Başka durum" };
+const portalSatirlari = new Map();
+const portalNoktalari = new Map();
+
+function portalOzet(k) {
+  const parcalar = [PORTAL_DURUM[k.durum]];
+  if (k.kisi) parcalar.push(k.kisi + " kişi");
+  if (k.yarali !== null) parcalar.push(k.yarali ? "yaralı var" : "yaralı yok");
+  if (k.tarif) parcalar.push(k.tarif);
+  if (k.mesaj) parcalar.push(k.mesaj);
+  if (k.ad) parcalar.push(k.ad);
+  if (k.adet > 1) parcalar.push(k.adet + " çağrı");
+  return parcalar.join(" · ");
+}
+
+function asilsizDugmesi(k) {
+  const d = document.createElement("button");
+  d.className = "kucuk";
+  d.textContent = k.asilsiz ? "Geri al" : "Asılsız";
+  d.addEventListener("click", async () => {
+    d.disabled = true;
+    await fetch("/api/portal/" + encodeURIComponent(k.kod) + "/asilsiz" + (k.asilsiz ? "?kaldir=true" : ""), { method: "POST" });
+  });
+  return d;
+}
+
+function portalAl(k) {
+  const sos = k.tur === "SOS" && !k.asilsiz;
+  const ozet = portalOzet(k);
+  const zaman = k.guncellendi || k.zaman;
+  const tur = k.asilsiz ? etiket("Asılsız", "asilsiz") : etiket(k.tur === "SOS" ? "SOS" : "Güvende", sos ? "sos" : "mesaj");
+
+  olaySatiri("portal-" + k.kod, (r) => {
+    if (k.asilsiz) r.classList.add("asilsiz");
+    hucre(r, saatYaz(zaman));
+    hucre(r, tur.cloneNode(true));
+    hucre(r, "Portal " + k.kod);
+    hucre(r, ozet, "metin");
+    r.lastChild.colSpan = 2;
+  }, sos);
+
+  // Guncellenen kayit yeni satir acmaz, ayni satir en uste tasinir.
+  portalSatirlari.get(k.kod)?.remove();
+  const s = mesajlar.insertRow(0);
+  if (sos) s.className = "sos";
+  if (k.asilsiz) s.className = "asilsiz";
+  hucre(s, saatYaz(zaman));
+  hucre(s, "Portal " + k.kod);
+  const turHucresi = hucre(s, tur);
+  if (k.onceden_asilsiz && !k.asilsiz) turHucresi.append(" ", etiket("Önceden asılsız", "asilsiz"));
+  const metin = hucre(s, ozet + " ", "metin");
+  metin.append(asilsizDugmesi(k));
+  portalSatirlari.set(k.kod, s);
+  satirSinirla(mesajlar);
+
+  if (k.gps) {
+    portalNoktalari.get(k.kod)?.remove();
+    const nokta = L.circleMarker([k.gps.lat, k.gps.lon], {
+      radius: sos ? 8 : 6, color: sos ? renk.kritik : renk["yazi-2"], weight: 2,
+      fillColor: sos ? renk.kritik : renk.panel, fillOpacity: sos ? 0.9 : 0.8,
+    })
+      .bindPopup(popup([["Portal " + k.kod], [null, ozet], [null, "Konum: erişim noktası"]]))
+      .addTo(harita);
+    if (!portalNoktalari.has(k.kod)) mesajNoktasi++;
+    portalNoktalari.set(k.kod, nokta);
+    haritaOzet();
+  }
+}
+
+const qrKutu = document.getElementById("qr-kutu");
+document.getElementById("qr-ac").addEventListener("click", async () => {
+  const { adres } = await (await fetch("/api/portal/adres")).json();
+  const qr = qrcode(0, "M");
+  qr.addData(adres);
+  qr.make();
+  document.getElementById("qr").innerHTML = qr.createSvgTag({ cellSize: 6, margin: 4 });
+  document.getElementById("qr-adres").textContent = adres;
+  qrKutu.showModal();
+});
+
 // --- Sinyal ---
 // Renk durumu anlatir: esigin altindaki dugum turuncu/kirmizi, digerleri gri.
 const ESIK = { rssi: [-85, -95], oran: [80, 60] };
@@ -294,6 +375,7 @@ function baglan() {
     if (tip === "olay") olayAl(veri);
     else if (tip === "mesaj") mesajAl(veri);
     else if (tip === "sinyal") sinyaller.set(veri.dugum_id, veri);
+    else if (tip === "portal") portalAl(veri);
   };
   ws.onclose = () => {
     durum.className = "durum kopuk";

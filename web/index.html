@@ -27,7 +27,7 @@
     <div class="icerik kaydir"><table class="liste"><thead><tr><th>Saat</th><th>Tür</th><th>Kaynak</th><th class="sag">Güven</th><th class="sag">Adet</th></tr></thead><tbody id="olaylar"></tbody></table></div>
   </section>
   <section id="p-mesajlar" class="panel">
-    <h2>Mesajlar</h2>
+    <h2>Mesajlar <button id="qr-ac" class="kucuk">Portal QR</button></h2>
     <div class="icerik dikey">
       <div class="dugmeler">
         <button data-yuk="Enkaz altındayım">Enkaz altındayım</button>
@@ -47,9 +47,17 @@
     </div>
   </section>
 </main>
+<dialog id="qr-kutu">
+  <h2>Afetzede portalı</h2>
+  <div id="qr"></div>
+  <p id="qr-adres"></p>
+  <p class="ek">Telefon bu bilgisayarın Wi-Fi ağına bağlıyken okutun.</p>
+  <form method="dialog"><button>Kapat</button></form>
+</dialog>
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="vendor/protomaps-leaflet/protomaps-leaflet.js"></script>
 <script src="vendor/chartjs/chart.umd.min.js"></script>
+<script src="vendor/qrcode/qrcode.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
