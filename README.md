@@ -92,9 +92,12 @@ afet-projesi/
     llm.py         yerel LLM triyajı, durum raporu, kural tabanlı yedek
     db.py          vaka kuyruğu ve durum geçmişi (SQLite)
     kanal.py       msgpack kodlama, BLE / LoRa / uydu kanal simülasyonu
+    senaryo.py     zaman çizelgeli senaryo oynatıcı
     sources/       veri kaynakları: base.py arayüz, mock.py sahte veri
   web/             panel (HTML, CSS, JS, vendor/)
-  data/            örnek sığınaklar
+  data/            örnek sığınaklar, düğüm yerleşimi, harita dosyası
+  scenarios/       demo senaryoları
+  olcumler/        ölçüm sonuçları
   scripts/         ölçüm, karo indirme, hotspot/ erişim noktası
   tests/
 ```
@@ -178,6 +181,26 @@ görünür. Demoda görünsün diye simülasyon saati hızlandırılmıştır: 1
 (`AFET_ENERJI_HIZ`). 2000 mAh ve 5 mA 12 Ekim planındaki örnekten, 20 mA
 tahmin; EEE'nin güç bütçesi gelince `server/sources/mock.py` güncellenecek.
 Pil ömrü sütunu bu varsayımlardan hesaplandı, ölçüm değil.
+
+## Senaryo oynatıcı
+
+Demoda her seferinde aynı akışı göstermek için. Panelin üst çubuğunda senaryo
+seçilir, **Senaryoyu başlat** ile oynatılır; ilerleme, süre ve o anki adımın
+notu yanında görünür. **Kuyruğu temizle** işaretliyse başlamadan önce eski
+vakalar ve portal kayıtları silinir (onay sorulur). Başlarken tüm kanallar
+açılır; senaryo süresince sahte veri üreticisi kendi olay ve mesajlarını
+durdurur, sinyal ve pil verisi akmaya devam eder.
+
+Adımlar sunucunun normal yollarından geçer: olaylar birleştirilir, düğüm
+mesajları şifrelenip çözülür, portal çağrıları triyaj ve kanal seçiminden geçer.
+
+Örnek: `scenarios/yozgat-deprem.json` (3,5 dk; vuruş ve insan tespiti,
+düğümlerden SOS, 4 portal çağrısı, BLE ve LoRa kopması). Biçim:
+`shared/senaryo.schema.json`. Önerilen demo komutu:
+
+```bash
+.venv/bin/python -m server.main --kaynak mock --host 0.0.0.0
+```
 
 ## Kanal simülasyonu
 
