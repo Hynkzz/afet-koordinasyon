@@ -175,6 +175,9 @@ def test_ayrintidan_sonra_triyaj_guncellenir(ortam, monkeypatch):
     assert nesne.kayitlar[kod]["triyaj"]["oncelik"] == 2
     with istemci.websocket_connect("/ws") as ws:
         istemci.post(f"/portal/ayrinti/{kod}", data={"mesaj": "Annem bilincini kaybetti"})
-        paketler = [ws.receive_json(), ws.receive_json()]
-    assert paketler[-1]["veri"]["triyaj"]["oncelik"] == 1
+        paketler = [ws.receive_json() for _ in range(4)]
+    portal_paketleri = [p for p in paketler if p["tip"] == "portal"]
+    assert portal_paketleri[-1]["veri"]["triyaj"]["oncelik"] == 1
+    assert paketler[-1] == {"tip": "vaka", "veri": paketler[-1]["veri"]}
+    assert paketler[-1]["veri"]["oncelik"] == 1
     assert nesne.kayitlar[kod]["triyaj"]["oncelik"] == 1
