@@ -57,6 +57,13 @@ class Vakalar:
             )
         return self.getir(id)
 
+    def acik_olay_vakasi(self, anahtar: str) -> dict | None:
+        satir = self.baglanti.execute(
+            "SELECT * FROM vakalar WHERE kaynak = 'olay' AND durum != 'kurtarildi' "
+            "AND json_extract(veri, '$.anahtar') = ? ORDER BY zaman DESC LIMIT 1", (anahtar,)
+        ).fetchone()
+        return self._sozluk(satir) if satir else None
+
     def getir(self, id: str) -> dict | None:
         satir = self.baglanti.execute("SELECT * FROM vakalar WHERE id = ?", (id,)).fetchone()
         return self._sozluk(satir) if satir else None

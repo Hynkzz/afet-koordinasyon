@@ -375,7 +375,8 @@ function vakaKaynagi(v) {
 function vakaOzeti(v) {
   if (v.kaynak === "olay") {
     const ad = v.veri.etiket === "insan" ? "İnsan tespiti" : "Vuruş";
-    return ad + " · güven " + v.veri.guven.toFixed(2) + (v.veri.adet > 1 ? " · " + v.veri.adet + " kez" : "");
+    return ad + " · " + v.veri.seri + " seri, " + v.veri.tespit + " tespit · en yüksek güven " +
+      v.veri.en_yuksek_guven.toFixed(2) + " · son " + saatYaz(v.veri.son_olay.zaman);
   }
   if (v.kaynak === "mesaj") return "SOS: " + v.veri.yuk;
   return portalOzet(v.veri);

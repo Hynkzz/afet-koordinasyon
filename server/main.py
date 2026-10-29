@@ -178,9 +178,28 @@ async def vaka_kaydet(id: str, kaynak: str, oncelik: int, veri: dict):
 async def olay_isle(olay: Olay) -> dict:
     kayit = birlestirici.ekle(olay)
     await yayinci.yayinla("olay", kayit)
-    # Vurus, enkaz altinda canli biri demek; kamerada gorulen kisi ise cogu zaman ulasilabilir durumda.
-    await vaka_kaydet(kayit["olay_id"], "olay", 1 if kayit["etiket"] == "vurus" else 2, kayit)
+    await olay_vakasi(kayit)
     return kayit
+
+
+async def olay_vakasi(kayit: dict):
+    # Ayni sensorun ayni etiketi, vaka kurtarilana kadar tek vakada toplanir; yoksa her vurus
+    # serisi yeni bir vaka acar ve portaldan gelen SOS kuyrukta asagida kalir.
+    anahtar = f"{kayit['kaynak']}-{kayit['etiket']}"
+    acik = vakalar.acik_olay_vakasi(anahtar)
+    if acik:
+        id, veri = acik["id"], acik["veri"]
+        veri["tespit"] += 1
+        if kayit["olay_id"] != veri["son_olay"]["olay_id"]:
+            veri["seri"] += 1
+        veri["en_yuksek_guven"] = max(veri["en_yuksek_guven"], kayit["guven"])
+        veri["son_olay"] = kayit
+    else:
+        id = f"olay-{anahtar}-{time.time_ns() // 1_000_000}"
+        veri = {"anahtar": anahtar, "kaynak": kayit["kaynak"], "etiket": kayit["etiket"], "tespit": 1, "seri": 1,
+                "en_yuksek_guven": kayit["guven"], "son_olay": kayit}
+    # Vurus, enkaz altinda canli biri demek; kamerada gorulen kisi ise cogu zaman ulasilabilir durumda.
+    await vaka_kaydet(id, "olay", 1 if kayit["etiket"] == "vurus" else 2, veri)
 
 
 async def paket_isle(paket: Paket):

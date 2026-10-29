@@ -86,16 +86,48 @@ def olay(etiket="vurus", no=1):
             "etiket": etiket, "guven": 0.7, "zaman": datetime.now(timezone.utc).isoformat()}
 
 
+def kuyruk(istemci):
+    return istemci.get("/api/kuyruk").json()["kuyruk"]
+
+
 def test_olay_kuyruga_girer_vurus_oncelik_1(istemci):
     istemci.post("/api/olay", json=olay("vurus"))
-    kuyruk = istemci.get("/api/kuyruk").json()["kuyruk"]
-    assert [(v["id"], v["oncelik"]) for v in kuyruk] == [("t-vurus-1", 1)]
+    assert [(v["kaynak"], v["oncelik"]) for v in kuyruk(istemci)] == [("olay", 1)]
+
+
+def test_ayni_sensorun_serileri_tek_vakada_toplanir(istemci):
+    from server.main import birlestirici
+
+    for no in range(3):
+        birlestirici._son.clear()  # her biri ayri seri (3 sn'den sonra gelmis gibi)
+        istemci.post("/api/olay", json=olay("vurus", no))
+        istemci.post("/api/olay", json=olay("vurus", no) | {"guven": 0.9})
+    vakalar = kuyruk(istemci)
+    assert len(vakalar) == 1
+    assert (vakalar[0]["veri"]["seri"], vakalar[0]["veri"]["tespit"]) == (3, 6)
+    assert vakalar[0]["veri"]["en_yuksek_guven"] == 0.9
+
+
+def test_kurtarildiktan_sonra_yeni_vaka_acilir(istemci):
+    istemci.post("/api/olay", json=olay("vurus", 1))
+    ilk = kuyruk(istemci)[0]["id"]
+    istemci.post(f"/api/vaka/{ilk}/durum", json={"durum": "kurtarildi"})
+    istemci.post("/api/olay", json=olay("vurus", 2))
+    yeni = kuyruk(istemci)
+    assert len(yeni) == 1 and yeni[0]["id"] != ilk
+
+
+def test_insan_ve_vurus_ayri_vaka(istemci):
+    istemci.post("/api/olay", json=olay("vurus"))
+    istemci.post("/api/olay", json=olay("insan"))
+    assert sorted(v["veri"]["etiket"] for v in kuyruk(istemci)) == ["insan", "vurus"]
 
 
 def test_operator_durumu_degistirir_ve_yayinlanir(istemci):
     istemci.post("/api/olay", json=olay("vurus"))
+    id = kuyruk(istemci)[0]["id"]
     with istemci.websocket_connect("/ws") as ws:
-        cevap = istemci.post("/api/vaka/t-vurus-1/durum", json={"durum": "ekip_yonlendirildi"})
+        cevap = istemci.post(f"/api/vaka/{id}/durum", json={"durum": "ekip_yonlendirildi"})
         paket = ws.receive_json()
     assert cevap.status_code == 200
     assert paket["tip"] == "vaka" and paket["veri"]["durum"] == "ekip_yonlendirildi"
@@ -103,7 +135,7 @@ def test_operator_durumu_degistirir_ve_yayinlanir(istemci):
 
 def test_gecersiz_durum_422_bilinmeyen_vaka_404(istemci):
     istemci.post("/api/olay", json=olay("vurus"))
-    assert istemci.post("/api/vaka/t-vurus-1/durum", json={"durum": "x"}).status_code == 422
+    assert istemci.post(f"/api/vaka/{kuyruk(istemci)[0]['id']}/durum", json={"durum": "x"}).status_code == 422
     assert istemci.post("/api/vaka/yok/durum", json={"durum": "kurtarildi"}).status_code == 404
 
 
