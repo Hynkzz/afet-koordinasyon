@@ -11,11 +11,13 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
-from server.crypto import Sifreleyici, psk_oku
-from server.models import Mesaj, MesajIstek, Olay, Siginaklar, Taslak
+from server.crypto import GecersizPaket, Sifreleyici, psk_oku
+from server.models import Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
+from server.sources.mock import MockKaynak
 
 KOK = Path(__file__).resolve().parent.parent
 BIRLESTIRME_SURESI = 3.0
+KAYNAKLAR = {"mock": MockKaynak}
 
 log = logging.getLogger("afet")
 
@@ -84,7 +86,40 @@ async def omur(app: FastAPI):
     app.state.sifreleyici = Sifreleyici(psk_oku())
     app.state.siginaklar = Siginaklar.model_validate_json((KOK / "data" / "siginaklar.geojson").read_text())
     log.info("%d siginak yuklendi", len(app.state.siginaklar.features))
+    kaynak_adi = os.environ.get("AFET_KAYNAK", "yok")
+    gorev = None
+    if kaynak_adi != "yok":
+        kaynak = KAYNAKLAR[kaynak_adi](psk_oku())
+        gorev = asyncio.create_task(kaynak.calistir(olay_isle, paket_isle, sinyal_isle))
+        gorev.add_done_callback(kaynak_bitti)
+    log.info("Veri kaynagi: %s", kaynak_adi)
     yield
+    if gorev:
+        gorev.cancel()
+
+
+def kaynak_bitti(gorev: asyncio.Task):
+    if not gorev.cancelled() and gorev.exception():
+        log.error("Veri kaynagi durdu: %r", gorev.exception())
+
+
+async def olay_isle(olay: Olay) -> dict:
+    kayit = birlestirici.ekle(olay)
+    await yayinci.yayinla("olay", kayit)
+    return kayit
+
+
+async def paket_isle(paket: Paket):
+    try:
+        mesaj = app.state.sifreleyici.coz(paket)
+    except GecersizPaket as hata:
+        log.warning("Paket reddedildi: %s", hata)
+        return
+    await yayinci.yayinla("mesaj", mesaj.model_dump(mode="json", exclude_none=True))
+
+
+async def sinyal_isle(sinyal: Sinyal):
+    await yayinci.yayinla("sinyal", sinyal.model_dump(mode="json"))
 
 
 app = FastAPI(title="Afet Paneli", lifespan=omur)
@@ -110,9 +145,7 @@ async def siginaklar() -> Siginaklar:
 
 @app.post("/api/olay")
 async def olay_al(olay: Olay) -> dict:
-    kayit = birlestirici.ekle(olay)
-    await yayinci.yayinla("olay", kayit)
-    return kayit
+    return await olay_isle(olay)
 
 
 @app.post("/api/mesaj")
@@ -134,7 +167,10 @@ def main():
     ayrac = argparse.ArgumentParser(description="Afet paneli sunucusu")
     ayrac.add_argument("--host", default="127.0.0.1")
     ayrac.add_argument("--port", type=int, default=8000)
+    ayrac.add_argument("--kaynak", choices=["yok", *KAYNAKLAR], help="veri kaynagi; verilmezse AFET_KAYNAK, o da yoksa 'yok'")
     secim = ayrac.parse_args()
+    if secim.kaynak:
+        os.environ["AFET_KAYNAK"] = secim.kaynak
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     uvicorn.run(app, host=secim.host, port=secim.port)
 
