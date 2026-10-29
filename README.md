@@ -89,12 +89,32 @@ afet-projesi/
     models.py      pydantic modelleri (shared/ ile birebir)
     crypto.py      şifreleme ve tekrar koruması
     portal.py      afetzede portalı ve kötüye kullanım önlemleri
+    llm.py         yerel LLM triyajı, durum raporu, kural tabanlı yedek
+    db.py          vaka kuyruğu ve durum geçmişi (SQLite)
     sources/       veri kaynakları: base.py arayüz, mock.py sahte veri
   web/             panel (HTML, CSS, JS, vendor/)
   data/            örnek sığınaklar
   scripts/         ölçüm, karo indirme, hotspot/ erişim noktası
   tests/
 ```
+
+## Operatör kuyruğu
+
+Olaylar panelinin **Kuyruk** sekmesi açık vakaları öncelik, sonra bekleme
+süresine göre sıralar. Her vakanın durumu tek tıkla ilerler: Yeni → Ekip
+yönlendirildi → Kurtarıldı. Değişiklik tüm açık panellere ve portaldaki takip
+sayfasına yansır.
+
+| Vaka | Öncelik |
+|---|---|
+| Vuruş (mikrofon) | 1: enkaz altında canlı biri |
+| İnsan tespiti (kamera) | 2 |
+| Mesh'ten gelen SOS | Mesaj metninden kural tabanlı triyaj (1 ya da 2) |
+| Portal çağrısı | Triyaj sonucu (LLM ya da kural) |
+
+Vakalar ve durum geçmişi `data/afet.db` (SQLite) dosyasında; sunucu yeniden
+açılınca kaybolmaz. Temiz bir demo için sunucu kapalıyken bu dosyayı silin.
+Sorgular milisaniye sürdüğü için ayrı iş parçacığına taşınmadı.
 
 ## Afetzede portalı
 
@@ -126,6 +146,30 @@ Telefonla denemek: sunucuyu `--host 0.0.0.0` ile açın, telefonu aynı Wi-Fi
 ağına bağlayın, paneldeki QR kodu okutun. Telefonun portal penceresini
 kendiliğinden açması için erişim noktası betiği:
 [`scripts/hotspot/`](scripts/hotspot/README.md).
+
+## Yerel LLM (isteğe bağlı)
+
+Afetzedenin serbest metni yerel bir dil modeliyle sınıflandırılır (kişi sayısı,
+yaralı, sıkışma, öncelik 1–3, tek cümle özet) ve her 60 saniyede bir kısa durum
+raporu yazılır. Model yoksa ya da hata verirse kural tabanlı yedek çalışır;
+panelde hangi yöntemin kullanıldığı görünür.
+
+[llama.cpp](https://github.com/ggml-org/llama.cpp/releases) ve bir GGUF model
+dosyasını `~/llm/` altına koyun, sonra:
+
+```bash
+scripts/llm_baslat.sh gpu      # ya da cpu
+```
+
+`.env`:
+
+```
+AFET_LLM_ADRES=http://127.0.0.1:8080/v1
+AFET_LLM_MODEL=qwen3-4b-instruct-2507-q4_k_m
+```
+
+OpenAI uyumlu her sunucu (Ollama dahil) çalışır. Ölçüm:
+`python -m scripts.llm_olc`, sonuçlar `olcumler/` altında.
 
 ## Çevrimdışı çalışma
 
