@@ -105,3 +105,7 @@ class MesajIstek(Sema):
     tur: Literal["SOS", "hazir_mesaj"]
     yuk: Yuk
     gps: Gps | None = None
+
+
+class DurumIstek(Sema):
+    durum: Literal["yeni", "ekip_yonlendirildi", "kurtarildi"]

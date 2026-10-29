@@ -86,6 +86,11 @@ class Portal:
         self.son_cagri: dict[str, tuple[float, str]] = {}
         self.asilsiz_cihaz: dict[str, float] = {}
         self.gorevler: set[asyncio.Task] = set()
+        self.vakalar = None
+
+    def yukle(self, vakalar):
+        self.vakalar = vakalar
+        self.kayitlar = {v["id"]: v["veri"] for v in vakalar.hepsi("portal")}
         # Cihaz kimligi karma olarak tutulur; tuz her acilista degisir, kayitlar baska oturumla eslestirilemez.
         self.tuz = secrets.token_bytes(16)
 
@@ -102,8 +107,12 @@ class Portal:
         return {"lat": lat, "lon": lon}
 
     async def yayinla_kayit(self, kayit: dict):
-        veri = {k: v for k, v in kayit.items() if k != "cihaz"}
-        await self.yayinla("portal", veri)
+        vaka = self.vakalar.kaydet(kayit["kod"], "portal", kayit["triyaj"]["oncelik"], kayit)
+        await self.yayinla("portal", {k: v for k, v in kayit.items() if k != "cihaz"})
+        await self.yayinla("vaka", vaka | {"veri": {k: v for k, v in kayit.items() if k != "cihaz"}})
+
+    def durum(self, kod: str) -> str:
+        return self.vakalar.getir(kod)["durum"]
 
     async def cagri(self, cihaz: str, durum: str) -> tuple[dict, bool]:
         simdi = self.saat()
@@ -120,7 +129,7 @@ class Portal:
             while kod in self.kayitlar:
                 kod = kod_uret()
             kayit = {
-                "kod": kod, "durum": durum, "tur": DURUMLAR[durum][2], "takip": "yeni",
+                "kod": kod, "durum": durum, "tur": DURUMLAR[durum][2],
                 "zaman": datetime.now().astimezone().isoformat(), "guncellendi": None, "adet": 1,
                 "gps": self.konum(), "kisi": None, "yarali": None, "tarif": "", "mesaj": "", "ad": "",
                 "asilsiz": False, "onceden_asilsiz": self.asilsiz_cihaz.get(cihaz, 0) > simdi, "cihaz": cihaz,
@@ -164,6 +173,7 @@ class Portal:
             self.asilsiz_cihaz[kayit["cihaz"]] = self.saat() + ASILSIZ_SN
         else:
             self.asilsiz_cihaz.pop(kayit["cihaz"], None)
+        self.vakalar.gecmise_yaz(kod, "asilsiz" if isaretle else "asilsiz_kaldirildi")
         log.info("Portal kaydi %s asilsiz isareti: %s", kod, "kondu" if isaretle else "kaldirildi")
         await self.yayinla_kayit(kayit)
 
@@ -210,7 +220,7 @@ def ayrinti_sayfasi(kayit: dict, yeni: bool) -> HTMLResponse:
     )
 
 
-def takip_sayfasi(kayit: dict | None, kod: str) -> HTMLResponse:
+def takip_sayfasi(kayit: dict | None, kod: str, takip: str = "yeni") -> HTMLResponse:
     if kayit is None:
         hata = f'<p class="hata">"{html.escape(kod)}" kodlu bir kayıt bulunamadı.</p>' if kod else ""
         return sayfa(
@@ -219,7 +229,6 @@ def takip_sayfasi(kayit: dict | None, kod: str) -> HTMLResponse:
             '<input id="kod" name="kod" autocapitalize="characters" placeholder="Örn. K7M-4C9">'
             '<button class="gonder notr">Sorgula</button></form>'
         )
-    takip = kayit["takip"]
     saat = datetime.fromisoformat(kayit["guncellendi"] or kayit["zaman"]).strftime("%H:%M")
     return sayfa(
         '<p class="not">Mesajınız alındı.</p><div class="baslik">Takip kodunuz</div>'
@@ -264,7 +273,8 @@ def kur(app: FastAPI, portal: Portal):
         kod = kod.strip().upper()
         if len(kod) == 6 and "-" not in kod:
             kod = f"{kod[:3]}-{kod[3:]}"
-        return takip_sayfasi(portal.kayitlar.get(kod), kod)
+        kayit = portal.kayitlar.get(kod)
+        return takip_sayfasi(kayit, kod, portal.durum(kod) if kayit else "yeni")
 
     @app.post("/api/portal/{kod}/asilsiz")
     async def asilsiz_isaretle(kod: str, kaldir: bool = False):

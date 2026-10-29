@@ -10,13 +10,14 @@ from datetime import datetime
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
 from server import llm
 from server import portal as portal_modulu
 from server.crypto import GecersizPaket, Sifreleyici, psk_oku
-from server.models import Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
+from server.db import Vakalar
+from server.models import DurumIstek, Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
 from server.sources.mock import MockKaynak
 
 KOK = Path(__file__).resolve().parent.parent
@@ -125,6 +126,10 @@ async def omur(app: FastAPI):
     app.state.sifreleyici = Sifreleyici(psk_oku())
     app.state.siginaklar = Siginaklar.model_validate_json((KOK / "data" / "siginaklar.geojson").read_text())
     log.info("%d siginak yuklendi", len(app.state.siginaklar.features))
+    global vakalar
+    vakalar = Vakalar(os.environ.get("AFET_DB", KOK / "data" / "afet.db"))
+    portal.yukle(vakalar)
+    log.info("Veritabani: %d acik vaka, %d portal kaydi", len(vakalar.kuyruk()), len(portal.kayitlar))
     kaynak_adi = os.environ.get("AFET_KAYNAK", "yok")
     gorev = None
     if kaynak_adi != "yok":
@@ -139,6 +144,10 @@ async def omur(app: FastAPI):
     rapor_gorevi.cancel()
     if gorev:
         gorev.cancel()
+    vakalar.kapat()
+
+
+vakalar: Vakalar | None = None
 
 
 son_rapor: dict | None = None
@@ -159,9 +168,15 @@ def kaynak_bitti(gorev: asyncio.Task):
         log.error("Arka plan gorevi durdu: %r", gorev.exception())
 
 
+async def vaka_kaydet(id: str, kaynak: str, oncelik: int, veri: dict):
+    await yayinci.yayinla("vaka", vakalar.kaydet(id, kaynak, oncelik, veri))
+
+
 async def olay_isle(olay: Olay) -> dict:
     kayit = birlestirici.ekle(olay)
     await yayinci.yayinla("olay", kayit)
+    # Vurus, enkaz altinda canli biri demek; kamerada gorulen kisi ise cogu zaman ulasilabilir durumda.
+    await vaka_kaydet(kayit["olay_id"], "olay", 1 if kayit["etiket"] == "vurus" else 2, kayit)
     return kayit
 
 
@@ -171,7 +186,10 @@ async def paket_isle(paket: Paket):
     except GecersizPaket as hata:
         log.warning("Paket reddedildi: %s", hata)
         return
-    await yayinci.yayinla("mesaj", mesaj.model_dump(mode="json", exclude_none=True))
+    veri = mesaj.model_dump(mode="json", exclude_none=True)
+    await yayinci.yayinla("mesaj", veri)
+    if mesaj.tur == "SOS":
+        await vaka_kaydet(mesaj.id, "mesaj", llm.kural_triyaj(mesaj.yuk, sos=True).oncelik, veri)
 
 
 async def sinyal_isle(sinyal: Sinyal):
@@ -192,6 +210,22 @@ async def ws_ucu(ws: WebSocket):
         pass
     finally:
         yayinci.baglantilar.discard(ws)
+
+
+@app.get("/api/kuyruk")
+async def kuyruk() -> dict:
+    return {"kuyruk": vakalar.kuyruk(), "sayilar": vakalar.sayilar()}
+
+
+@app.post("/api/vaka/{id}/durum")
+async def durum_degistir(id: str, istek: DurumIstek) -> dict:
+    try:
+        vaka = vakalar.durum_degistir(id, istek.durum)
+    except KeyError:
+        raise HTTPException(404, "vaka yok")
+    log.info("Vaka %s: %s", id, istek.durum)
+    await yayinci.yayinla("vaka", vaka)
+    return vaka
 
 
 @app.get("/api/rapor")
