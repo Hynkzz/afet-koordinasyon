@@ -20,7 +20,7 @@ from server import senaryo as senaryo_modulu
 from server.crypto import GecersizPaket, Sifreleyici, psk_oku
 from server.db import Vakalar
 from server.kanal import KANALLAR, Kanallar
-from server.models import Dugumler, DurumIstek, KanalIstek, SenaryoIstek, Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
+from server.models import Dugumler, DurumIstek, KameraKaresi, KanalIstek, SenaryoIstek, Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
 from server.sources.mock import MockKaynak
 
 KOK = Path(__file__).resolve().parent.parent
@@ -270,6 +270,13 @@ async def ws_ucu(ws: WebSocket):
         pass
     finally:
         yayinci.baglantilar.discard(ws)
+
+
+@app.post("/api/kamera/kare")
+async def kamera_karesi(kare: KameraKaresi) -> dict:
+    # Yalnizca canli goruntu: kaydedilmez, son_yayinlar'a girmez; olaylar ayri /api/olay ile gelir.
+    await yayinci.yayinla("kare", kare.model_dump() | {"zaman": datetime.now().astimezone().isoformat()})
+    return {"tamam": True}
 
 
 @app.get("/api/kuyruk")

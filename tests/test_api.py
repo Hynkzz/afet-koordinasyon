@@ -76,3 +76,17 @@ def test_gecmis_son_yayinlari_ve_portal_kayitlarini_verir(istemci):
     assert tipler[-1] == "portal" and "olay" in tipler and "mesaj" in tipler
     assert all("alindi" in p for p in paketler if p["tip"] == "mesaj")
     assert "cihaz" not in paketler[-1]["veri"]
+
+
+def test_kamera_karesi_yayinlanir_ve_saklanmaz(istemci):
+    kare = {"jpeg": "AAAA", "kutular": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.4, "guven": 0.9}], "kaynak": "v.webm"}
+    with istemci.websocket_connect("/ws") as ws:
+        assert istemci.post("/api/kamera/kare", json=kare).status_code == 200
+        paket = ws.receive_json()
+    assert paket["tip"] == "kare" and paket["veri"]["kutular"][0]["guven"] == 0.9
+    assert all(p["tip"] != "kare" for p in istemci.get("/api/gecmis").json())
+
+
+def test_cok_buyuk_kare_reddedilir(istemci):
+    kare = {"jpeg": "A" * 600_001, "kutular": [], "kaynak": "v"}
+    assert istemci.post("/api/kamera/kare", json=kare).status_code == 422

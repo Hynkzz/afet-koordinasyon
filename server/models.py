@@ -138,3 +138,14 @@ class Dugumler(BaseModel):
 class SenaryoIstek(Sema):
     dosya: Annotated[str, Field(min_length=1, max_length=100)]
     temizle: bool = False
+
+
+class KareKutusu(Kutu):
+    guven: Oran
+
+
+class KameraKaresi(Sema):
+    # 640 piksel genislik, JPEG kalite 70: tipik kare 30-60 KB; sinir tasma ve kotu niyetli istek icin.
+    jpeg: Annotated[str, Field(min_length=1, max_length=600_000)]
+    kutular: Annotated[list[KareKutusu], Field(max_length=100)]
+    kaynak: Annotated[str, Field(max_length=100)]
