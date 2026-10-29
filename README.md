@@ -98,7 +98,8 @@ afet-projesi/
   data/            örnek sığınaklar, düğüm yerleşimi, harita dosyası
   scenarios/       demo senaryoları
   olcumler/        ölçüm sonuçları
-  scripts/         ölçüm, karo indirme, hotspot/ erişim noktası
+  vurus/           ses kaydında vuruş tespiti (ayrı program)
+  scripts/         ölçüm, veri ve karo indirme, hotspot/ erişim noktası
   tests/
 ```
 
@@ -150,6 +151,20 @@ Telefonla denemek: sunucuyu `--host 0.0.0.0` ile açın, telefonu aynı Wi-Fi
 ağına bağlayın, paneldeki QR kodu okutun. Telefonun portal penceresini
 kendiliğinden açması için erişim noktası betiği:
 [`scripts/hotspot/`](scripts/hotspot/README.md).
+
+## Vuruş tespiti
+
+Kayıtlı ses dosyasında vuruş serisi arar; YOLO betiği gibi ayrı çalışır ve
+bulduğunu `POST /api/olay` ile gönderir:
+
+```bash
+.venv/bin/python -m vurus kayit.wav --sunucu http://127.0.0.1:8000
+```
+
+16 bit PCM WAV okur. Yöntem: 150–1500 Hz bant geçiren filtre, enerjide ani
+yükseliş, darbenin sönmesi ve enerjisinin bantta toplanması, en az 3 düzenli
+aralıklı vuruş. Makine öğrenmesi yok; eşikler `vurus/tespit.py` başında.
+ESC-50 ile ölçüm: `olcumler/vurus-tespiti-2026-10-29.md`.
 
 ## Harita katmanları ve dışa aktarım
 
