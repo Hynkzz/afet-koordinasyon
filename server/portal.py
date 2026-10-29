@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import html
 import logging
@@ -11,6 +12,8 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 from fastapi import FastAPI, HTTPException, Request
+
+from server import llm
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 log = logging.getLogger("afet")
@@ -82,6 +85,7 @@ class Portal:
         self.kayitlar: dict[str, dict] = {}
         self.son_cagri: dict[str, tuple[float, str]] = {}
         self.asilsiz_cihaz: dict[str, float] = {}
+        self.gorevler: set[asyncio.Task] = set()
         # Cihaz kimligi karma olarak tutulur; tuz her acilista degisir, kayitlar baska oturumla eslestirilemez.
         self.tuz = secrets.token_bytes(16)
 
@@ -123,6 +127,8 @@ class Portal:
             }
             self.kayitlar[kod] = kayit
             yeni = True
+        # Ilk dokunusta serbest metin yok; secilen durumdan kural tabanli oncelik verilir.
+        kayit["triyaj"] = llm.kural_triyaj(DURUMLAR[durum][0], sos=kayit["tur"] == "SOS").model_dump() | {"yontem": "kural"}
         self.son_cagri[cihaz] = (simdi, kayit["kod"])
         log.info("Portal cagrisi %s: %s (%s)", kayit["kod"], durum, "yeni" if yeni else "guncelleme")
         await self.yayinla_kayit(kayit)
@@ -137,6 +143,18 @@ class Portal:
         kayit["mesaj"] = form.get("mesaj", "")[:500]
         kayit["ad"] = form.get("ad", "")[:60]
         kayit["guncellendi"] = datetime.now().astimezone().isoformat()
+        await self.yayinla_kayit(kayit)
+        # LLM yanitini beklemeden kullaniciya donulur; sonuc gelince panel guncellenir.
+        gorev = asyncio.create_task(self.triyaj_et(kod))
+        self.gorevler.add(gorev)
+        gorev.add_done_callback(self.gorevler.discard)
+
+    async def triyaj_et(self, kod: str):
+        kayit = self.kayitlar[kod]
+        metin = f"{DURUMLAR[kayit['durum']][0]}. {kayit['mesaj']}".strip()
+        sonuc, yontem = await llm.triyaj(metin, kayit["kisi"], kayit["yarali"], sos=kayit["tur"] == "SOS")
+        kayit["triyaj"] = sonuc.model_dump() | {"yontem": yontem}
+        log.info("Portal kaydi %s triyaj: oncelik %d (%s)", kod, sonuc.oncelik, yontem)
         await self.yayinla_kayit(kayit)
 
     async def asilsiz(self, kod: str, isaretle: bool):

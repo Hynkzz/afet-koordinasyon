@@ -160,3 +160,21 @@ def test_kod_karisan_harf_icermez():
     for _ in range(200):
         kod = portal_modulu.kod_uret()
         assert not set(kod) & set("0O1IL")
+
+
+def test_ilk_dokunusta_kural_oncelik(ortam):
+    istemci, nesne, _ = ortam
+    assert nesne.kayitlar[cagri(istemci, "enkaz")]["triyaj"]["oncelik"] == 1
+    assert nesne.kayitlar[cagri(istemci, "guvende")]["triyaj"]["yontem"] == "kural"
+
+
+def test_ayrintidan_sonra_triyaj_guncellenir(ortam, monkeypatch):
+    istemci, nesne, saat = ortam
+    monkeypatch.delenv("AFET_LLM_ADRES", raising=False)
+    kod = cagri(istemci, "yarali")
+    assert nesne.kayitlar[kod]["triyaj"]["oncelik"] == 2
+    with istemci.websocket_connect("/ws") as ws:
+        istemci.post(f"/portal/ayrinti/{kod}", data={"mesaj": "Annem bilincini kaybetti"})
+        paketler = [ws.receive_json(), ws.receive_json()]
+    assert paketler[-1]["veri"]["triyaj"]["oncelik"] == 1
+    assert nesne.kayitlar[kod]["triyaj"]["oncelik"] == 1

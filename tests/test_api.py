@@ -49,3 +49,19 @@ def test_mesaj_gonderilir_ve_yayinlanir(istemci):
 
 def test_arayuz_ack_gonderemez(istemci):
     assert istemci.post("/api/mesaj", json={"tur": "ack", "yuk": "x"}).status_code == 422
+
+
+def test_durum_raporu_ozeti():
+    from server.main import Yayinci
+
+    y = Yayinci()
+    y.kaydet("olay", OLAY)
+    y.kaydet("olay", OLAY | {"adet": 2})
+    y.kaydet("mesaj", {"id": "d1-1", "tur": "SOS"})
+    y.kaydet("portal", {"kod": "AAA-AAA", "tur": "SOS", "asilsiz": False, "triyaj": {"oncelik": 1}})
+    y.kaydet("portal", {"kod": "CCC-CCC", "tur": "SOS", "asilsiz": True, "triyaj": {"oncelik": 1}})
+    y.kaydet("sinyal", {"dugum_id": "d4", "rssi": -90, "paket_alim_orani": 0.95})
+    y.kaydet("sinyal", {"dugum_id": "d5", "rssi": -60, "paket_alim_orani": 0.97})
+    ozet = y.ozet()
+    assert (ozet["vurus"], ozet["sos"], ozet["portal"], ozet["oncelik1"]) == (1, 2, 1, 1)
+    assert ozet["zayif_dugum"] == ["d4"]

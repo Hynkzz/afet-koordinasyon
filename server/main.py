@@ -4,13 +4,16 @@ import itertools
 import logging
 import os
 import time
+from collections import deque
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
+from server import llm
 from server import portal as portal_modulu
 from server.crypto import GecersizPaket, Sifreleyici, psk_oku
 from server.models import Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
@@ -18,6 +21,8 @@ from server.sources.mock import MockKaynak
 
 KOK = Path(__file__).resolve().parent.parent
 BIRLESTIRME_SURESI = 3.0
+RAPOR_ARALIGI = 60
+RAPOR_PENCERESI_DK = 10
 KAYNAKLAR = {"mock": MockKaynak}
 
 log = logging.getLogger("afet")
@@ -36,8 +41,41 @@ def env_oku(yol: Path):
 class Yayinci:
     def __init__(self):
         self.baglantilar: set[WebSocket] = set()
+        # Durum raporu icin: yayinlanan her sey son 10 dakikalik pencerede tutulur.
+        self.gecmis: deque[tuple[float, str, dict]] = deque()
+        self.son_sinyal: dict[str, dict] = {}
+
+    def kaydet(self, tip: str, veri: dict):
+        simdi = time.time()
+        if tip == "sinyal":
+            self.son_sinyal[veri["dugum_id"]] = veri
+        elif tip in ("olay", "mesaj", "portal"):
+            self.gecmis.append((simdi, tip, veri))
+        while self.gecmis and simdi - self.gecmis[0][0] > RAPOR_PENCERESI_DK * 60:
+            self.gecmis.popleft()
+
+    def ozet(self) -> dict:
+        olaylar, mesajlar, portal = {}, {}, {}
+        for _, tip, veri in self.gecmis:
+            if tip == "olay":
+                olaylar[veri["olay_id"]] = veri
+            elif tip == "mesaj":
+                mesajlar[veri["id"]] = veri
+            elif tip == "portal":
+                portal[veri["kod"]] = veri
+        gecerli = [k for k in portal.values() if not k["asilsiz"]]
+        return {
+            "dakika": RAPOR_PENCERESI_DK,
+            "sos": sum(m["tur"] == "SOS" for m in mesajlar.values()) + sum(k["tur"] == "SOS" for k in gecerli),
+            "portal": len(gecerli),
+            "oncelik1": sum(k["triyaj"]["oncelik"] == 1 for k in gecerli),
+            "insan": sum(o["etiket"] == "insan" for o in olaylar.values()),
+            "vurus": sum(o["etiket"] == "vurus" for o in olaylar.values()),
+            "zayif_dugum": sorted(d for d, s in self.son_sinyal.items() if s["rssi"] <= -85 or s["paket_alim_orani"] <= 0.8),
+        }
 
     async def yayinla(self, tip: str, veri: dict):
+        self.kaydet(tip, veri)
         baglantilar = list(self.baglantilar)
         sonuclar = await asyncio.gather(
             *(ws.send_json({"tip": tip, "veri": veri}) for ws in baglantilar), return_exceptions=True
@@ -94,14 +132,31 @@ async def omur(app: FastAPI):
         gorev = asyncio.create_task(kaynak.calistir(olay_isle, paket_isle, sinyal_isle))
         gorev.add_done_callback(kaynak_bitti)
     log.info("Veri kaynagi: %s", kaynak_adi)
+    log.info("LLM: %s", os.environ.get("AFET_LLM_ADRES") or "tanimli degil, kural tabanli yedek kullanilacak")
+    rapor_gorevi = asyncio.create_task(rapor_dongusu())
+    rapor_gorevi.add_done_callback(kaynak_bitti)
     yield
+    rapor_gorevi.cancel()
     if gorev:
         gorev.cancel()
 
 
+son_rapor: dict | None = None
+
+
+async def rapor_dongusu():
+    global son_rapor
+    while True:
+        await asyncio.sleep(RAPOR_ARALIGI)
+        ozet = yayinci.ozet()
+        metin, yontem = await llm.durum_raporu(ozet)
+        son_rapor = {"metin": metin, "yontem": yontem, "zaman": datetime.now().astimezone().isoformat()}
+        await yayinci.yayinla("rapor", son_rapor)
+
+
 def kaynak_bitti(gorev: asyncio.Task):
     if not gorev.cancelled() and gorev.exception():
-        log.error("Veri kaynagi durdu: %r", gorev.exception())
+        log.error("Arka plan gorevi durdu: %r", gorev.exception())
 
 
 async def olay_isle(olay: Olay) -> dict:
@@ -137,6 +192,11 @@ async def ws_ucu(ws: WebSocket):
         pass
     finally:
         yayinci.baglantilar.discard(ws)
+
+
+@app.get("/api/rapor")
+async def rapor() -> dict | None:
+    return son_rapor
 
 
 @app.get("/api/siginaklar")
