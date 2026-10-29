@@ -91,6 +91,7 @@ afet-projesi/
     portal.py      afetzede portalı ve kötüye kullanım önlemleri
     llm.py         yerel LLM triyajı, durum raporu, kural tabanlı yedek
     db.py          vaka kuyruğu ve durum geçmişi (SQLite)
+    kanal.py       msgpack kodlama, BLE / LoRa / uydu kanal simülasyonu
     sources/       veri kaynakları: base.py arayüz, mock.py sahte veri
   web/             panel (HTML, CSS, JS, vendor/)
   data/            örnek sığınaklar
@@ -146,6 +147,18 @@ Telefonla denemek: sunucuyu `--host 0.0.0.0` ile açın, telefonu aynı Wi-Fi
 ağına bağlayın, paneldeki QR kodu okutun. Telefonun portal penceresini
 kendiliğinden açması için erişim noktası betiği:
 [`scripts/hotspot/`](scripts/hotspot/README.md).
+
+## Kanal simülasyonu
+
+Her giden mesaj (paneldeki SOS ve hazır mesajlar, portal kayıtları) msgpack
+ile kodlanır ve sırayla BLE (380 B), LoRa (200 B), uydu (340 B) kanallarından
+ilk açık ve sığanından gönderilir. Panelde her mesajın yanında kanal ve boyut
+görünür; **Kanallar** düğmeleriyle bir kanal elle çökertilip açılabilir.
+Portal mesajı açık hiçbir kanala sığmıyorsa en geniş açık kanala sığacak kadar
+sondan kırpılır ("kırpıldı"). Sınırlar simülasyon değeri: `server/kanal.py`.
+
+Gerçek mesajlarla boyut ölçümü: `python -m scripts.boyut_olc`, sonuç
+`olcumler/paket-boyutu-2026-10-29.md`.
 
 ## Yerel LLM (isteğe bağlı)
 
