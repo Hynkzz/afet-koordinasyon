@@ -95,3 +95,21 @@ Kare başına süre (ön işleme + çıkarım + son işleme): 640 px ~5 ms, 1280
 - 1280 px, LLM sunucusu GPU'da açıkken (3,1 GB) toplu işlemde belleğe sığmadı; tek görüntü
   işlemle çalıştı. Canlı kamera zaten tek kare işlediği için demoda sorun değil.
 - MOT20 sahneleri afet değil (yaya kalabalığı); açı benzer, ortam farklı.
+
+## MOT17 eklenmiş karışık model (karisik2) — 30.10.2026
+
+Eğitim: C2A + COCO + MOT17 (7 eğitim dizisi, her 5 karede bir, FRCNN kopyası; MOT17-13
+doğrulamada) = 9.236 eğitim görüntüsü (914 MOT17). 60 tur, 7.082 sn (1 sa 58 dk), RX 9070 XT.
+Betikler: `egitim/karisik2_hazirla.py`, `egitim/egit3.sh`. MOT20 eğitime girmedi.
+MOT20 ölçümü: `scripts/yolo_karsilastir.py` (laptop, RTX 3050).
+
+| Model | MOT20 640 px | MOT20 1280 px | C2A test (640) | COCO128 insan (640) |
+|---|---|---|---|---|
+| Hazır YOLO11n | 0,516 | 0,639 | 0,160 | 0,784 |
+| Yalnız C2A | 0,666 | 0,488 | 0,787 | 0,014 |
+| Karışık (C2A + COCO) | 0,630 | 0,594 | 0,782 | 0,497 |
+| Karışık2 (+ MOT17) | **0,790** | 0,760 | 0,781 | 0,518 |
+
+(mAP@0,5.) MOT17 eklemek güvenlik kamerası açısında 0,63'ten 0,79'a çıkardı; drone başarısı
+korundu (0,781), yer seviyesi hâlâ hazır modelin altında (0,518'e karşı 0,784). MOT17 ile MOT20
+farklı kamera ve sahneler, ama ikisi de yaya kalabalığı; afet ortamındaki başarı bilinmiyor.
