@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "senaryo.schema.json",
+  "title": "Senaryo",
+  "description": "Demoda oynatilan zaman cizelgeli akis. Her adim baslangictan t saniye sonra calisir.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ad", "adimlar"],
+  "properties": {
+    "ad": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "aciklama": { "type": "string", "maxLength": 500 },
+    "adimlar": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["t", "is"],
+        "properties": {
+          "t": { "type": "number", "minimum": 0 },
+          "not": { "description": "Panelde adim calisirken gosterilir.", "type": "string", "maxLength": 200 },
+          "is": {
+            "oneOf": [
+              {
+                "type": "object", "additionalProperties": false,
+                "required": ["tip", "kaynak", "etiket", "guven"],
+                "properties": {
+                  "tip": { "const": "olay" },
+                  "kaynak": { "enum": ["kamera", "mikrofon"] },
+                  "etiket": { "enum": ["insan", "vurus"] },
+                  "guven": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "kutu": { "$ref": "olay.schema.json#/properties/kutu" },
+                  "tekrar": { "description": "Ayni olay kac kez (seri).", "type": "integer", "minimum": 1, "maximum": 100 },
+                  "aralik": { "description": "Tekrarlar arasi saniye.", "type": "number", "minimum": 0 }
+                }
+              },
+              {
+                "type": "object", "additionalProperties": false,
+                "required": ["tip", "dugum", "tur", "yuk"],
+                "properties": {
+                  "tip": { "const": "mesaj" },
+                  "dugum": { "description": "dugum.schema.json'daki id.", "type": "string" },
+                  "tur": { "enum": ["SOS", "hazir_mesaj"] },
+                  "yuk": { "type": "string", "maxLength": 200 },
+                  "gps": { "$ref": "mesaj.schema.json#/properties/gps" }
+                }
+              },
+              {
+                "type": "object", "additionalProperties": false,
+                "required": ["tip", "durum"],
+                "properties": {
+                  "tip": { "const": "portal" },
+                  "durum": { "enum": ["enkaz", "yarali", "guvende", "baska"] },
+                  "kisi": { "enum": ["1", "2-5", "5+"] },
+                  "yarali": { "enum": ["evet", "hayir"] },
+                  "tarif": { "type": "string", "maxLength": 200 },
+                  "mesaj": { "type": "string", "maxLength": 500 }
+                }
+              },
+              {
+                "type": "object", "additionalProperties": false,
+                "required": ["tip", "ad", "acik"],
+                "properties": {
+                  "tip": { "const": "kanal" },
+                  "ad": { "enum": ["BLE", "LoRa", "Uydu"] },
+                  "acik": { "type": "boolean" }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "ad": "Kisa ornek",
+      "adimlar": [
+        {"t": 0, "not": "Vurus duyuldu", "is": {"tip": "olay", "kaynak": "mikrofon", "etiket": "vurus", "guven": 0.7, "tekrar": 3, "aralik": 1}},
+        {"t": 10, "is": {"tip": "mesaj", "dugum": "d3", "tur": "SOS", "yuk": "Enkaz altindayim", "gps": {"lat": 39.8141, "lon": 34.8012}}},
+        {"t": 20, "is": {"tip": "portal", "durum": "yarali", "kisi": "1", "yarali": "evet", "mesaj": "Bacagi kirik"}},
+        {"t": 30, "not": "BLE coktu", "is": {"tip": "kanal", "ad": "BLE", "acik": false}}
+      ]
+    }
+  ]
+}

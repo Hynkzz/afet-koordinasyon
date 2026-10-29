@@ -1,0 +1,22 @@
+{
+  "ad": "Yozgat merkez deprem, ilk dakikalar",
+  "aciklama": "Örnek senaryo: deprem sonrası ilk 3,5 dakika. Vuruş ve insan tespiti, düğümlerden SOS, portal çağrıları, BLE ve LoRa kopması. Konumlar ve olaylar kurgudur; gerçek enkaz senaryoları İnşaat bölümünden gelecek.",
+  "adimlar": [
+    {"t": 3, "not": "Mikrofon enkaz altından vuruş duyuyor", "is": {"tip": "olay", "kaynak": "mikrofon", "etiket": "vurus", "guven": 0.72, "tekrar": 3, "aralik": 1.2}},
+    {"t": 15, "not": "d3 düğümünden SOS", "is": {"tip": "mesaj", "dugum": "d3", "tur": "SOS", "yuk": "Enkaz altindayim", "gps": {"lat": 39.81415, "lon": 34.80122}}},
+    {"t": 25, "not": "Kamera enkaz yanında bir kişi görüyor", "is": {"tip": "olay", "kaynak": "kamera", "etiket": "insan", "guven": 0.83, "kutu": {"x": 0.38, "y": 0.33, "w": 0.11, "h": 0.34}, "tekrar": 12, "aralik": 0.5}},
+    {"t": 40, "not": "Afetzede portaldan yardım istiyor", "is": {"tip": "portal", "durum": "enkaz", "kisi": "2-5", "yarali": "hayir", "tarif": "Medrese Mah., caminin arkasındaki 4 katlı bina", "mesaj": "Merdiven çöktü, 3. kattayız, aşağı inemiyoruz"}},
+    {"t": 55, "not": "Vuruş tekrar ediyor", "is": {"tip": "olay", "kaynak": "mikrofon", "etiket": "vurus", "guven": 0.81, "tekrar": 4, "aralik": 1.0}},
+    {"t": 70, "not": "BLE ağı çöktü", "is": {"tip": "kanal", "ad": "BLE", "acik": false}},
+    {"t": 80, "not": "d5'ten SOS, BLE yok: LoRa'dan iletilir", "is": {"tip": "mesaj", "dugum": "d5", "tur": "SOS", "yuk": "Yarali var", "gps": {"lat": 39.82411, "lon": 34.79588}}},
+    {"t": 95, "not": "Portal: yaralı ihbarı", "is": {"tip": "portal", "durum": "yarali", "kisi": "1", "yarali": "evet", "tarif": "Cumhuriyet Cad., sarı apartman önü", "mesaj": "Babamın bacağı kırık, yürüyemiyor"}},
+    {"t": 115, "not": "LoRa da çöktü: uzun mesajlar uydudan", "is": {"tip": "kanal", "ad": "LoRa", "acik": false}},
+    {"t": 125, "not": "Portal: ayrıntılı uzun mesaj, uyduya sığacak kadar kırpılır", "is": {"tip": "portal", "durum": "enkaz", "kisi": "5+", "yarali": "evet", "tarif": "Bahçeşehir Mah., okulun karşısındaki yan yatmış bina, ikinci kat", "mesaj": "Annem ve kardeşim içeride kaldı, sesleri geliyor ama cevap vermekte zorlanıyorlar, kapı sıkıştı açılmıyor, lütfen acele edin"}},
+    {"t": 140, "not": "d2'den hazır mesaj", "is": {"tip": "mesaj", "dugum": "d2", "tur": "hazir_mesaj", "yuk": "Guvendeyim", "gps": {"lat": 39.82151, "lon": 34.81498}}},
+    {"t": 155, "not": "Kamera ikinci bir kişi görüyor", "is": {"tip": "olay", "kaynak": "kamera", "etiket": "insan", "guven": 0.77, "kutu": {"x": 0.62, "y": 0.41, "w": 0.09, "h": 0.28}, "tekrar": 10, "aralik": 0.5}},
+    {"t": 175, "not": "Portal: güvende bildirimi", "is": {"tip": "portal", "durum": "guvende", "kisi": "2-5", "tarif": "Toplanma alanındayız"}},
+    {"t": 195, "not": "BLE ağı geri geldi", "is": {"tip": "kanal", "ad": "BLE", "acik": true}},
+    {"t": 205, "not": "LoRa geri geldi", "is": {"tip": "kanal", "ad": "LoRa", "acik": true}},
+    {"t": 210, "not": "Senaryo sonu", "is": {"tip": "mesaj", "dugum": "d6", "tur": "hazir_mesaj", "yuk": "Ekip bolgeye ulasti"}}
+  ]
+}

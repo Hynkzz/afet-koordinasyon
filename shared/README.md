@@ -12,6 +12,7 @@ uymuyorsa sunucu reddeder ve sebebini döner.
 | `sinyal.schema.json` | Haberleşme | Düğüm bağlantı ölçümü güncellendiğinde |
 | `siginak.schema.json` | İnşaat | Bir kez, dosya olarak (`data/siginaklar.geojson`) |
 | `dugum.schema.json` | EEE + İnşaat | Bir kez, dosya olarak (`data/dugumler.geojson`) |
+| `senaryo.schema.json` | İnşaat (+ ekip) | Demo senaryosu, dosya olarak (`scenarios/*.json`) |
 
 Genel kurallar:
 - Alan adları Türkçe karaktersiz ve küçük harf.
@@ -157,6 +158,32 @@ konumuna koyar. GeoJSON `FeatureCollection`, her Feature bir `Point`.
 ```
 
 Şu anki `data/dugumler.geojson` örnektir: konumlar ve 80 m menzil tahmin.
+
+## Senaryo (İnşaat → bilgisayar)
+
+Demoda oynatılan zaman çizelgeli akış. Panelde **Senaryo** menüsünden seçilip
+başlatılır; adımlar sunucunun normal giriş yollarından geçer (olay birleştirme,
+şifreli mesaj, portal, kanallar), yani panel gerçek veriden ayırt etmez.
+
+| Adım alanı | Açıklama |
+|---|---|
+| `t` | Başlangıçtan saniye |
+| `not` | Panelde adım çalışırken gösterilen kısa açıklama |
+| `is.tip = "olay"` | `kaynak`, `etiket`, `guven`, isteğe bağlı `kutu`; `tekrar` + `aralik` ile seri |
+| `is.tip = "mesaj"` | Düğümden mesaj: `dugum` (`d1`…), `tur` (`SOS` / `hazir_mesaj`), `yuk`, isteğe bağlı `gps` |
+| `is.tip = "portal"` | Afetzede çağrısı: `durum` (`enkaz` / `yarali` / `guvende` / `baska`), isteğe bağlı `kisi`, `yarali`, `tarif`, `mesaj` |
+| `is.tip = "kanal"` | `ad` (`BLE` / `LoRa` / `Uydu`), `acik` (`false` = çöker) |
+
+```json
+{"ad": "Kisa ornek", "adimlar": [
+  {"t": 0, "not": "Vurus duyuldu", "is": {"tip": "olay", "kaynak": "mikrofon", "etiket": "vurus", "guven": 0.7, "tekrar": 3, "aralik": 1}},
+  {"t": 10, "is": {"tip": "mesaj", "dugum": "d3", "tur": "SOS", "yuk": "Enkaz altindayim"}},
+  {"t": 30, "not": "BLE coktu", "is": {"tip": "kanal", "ad": "BLE", "acik": false}}
+]}
+```
+
+Enkaz senaryoları (hangi binada, ne zaman, kaç kişi, nerede boşluk) İnşaat
+bölümünden geldiğinde bu biçime çevrilir. Örnek: `scenarios/yozgat-deprem.json`.
 
 ## Kendi verinizi kontrol etmek
 
