@@ -1,0 +1,6 @@
+# C2A (CC BY 4.0) + COCO val2017 insan goruntuleri (CC BY 4.0). Tek sinif: insan.
+path: /home/floo4s/afet-yolo/veri/karisik
+train: train/images
+val: val/images
+names:
+  0: person

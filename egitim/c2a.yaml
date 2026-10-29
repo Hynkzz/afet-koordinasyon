@@ -1,0 +1,7 @@
+# C2A (Nihal ve ark., 2024, arXiv:2408.04922), CC BY 4.0. Tek sinif: insan.
+path: /home/floo4s/afet-yolo/veri/new_dataset3
+train: train/images
+val: val/images
+test: test/images
+names:
+  0: person
