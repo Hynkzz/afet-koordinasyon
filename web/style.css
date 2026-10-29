@@ -156,3 +156,16 @@ dialog p, dialog form { margin: 8px 16px; }
 .etiket.o2 { color: var(--uyari); }
 .etiket.o3 { color: var(--yazi-2); }
 .yontem { color: var(--yazi-3); font-size: 11px; }
+
+.sekmeler { display: flex; gap: 4px; }
+.sekmeler button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 0 4px 2px; color: var(--yazi-3); font: inherit; text-transform: inherit; letter-spacing: inherit; }
+.sekmeler button.secili { color: var(--yazi); border-bottom-color: var(--yazi-2); }
+[hidden] { display: none !important; }
+
+.durum-etiketi { font-size: 12px; margin-right: 6px; }
+.durum-etiketi.yeni { color: var(--yazi); }
+.durum-etiketi.ekip_yonlendirildi { color: var(--uyari); }
+.durum-etiketi.kurtarildi { color: var(--normal); }
+#kuyruk td { vertical-align: top; }
+#kuyruk td.islem { width: 1%; }
+#kuyruk .durum-etiketi { display: block; margin: 0 0 3px; white-space: nowrap; }

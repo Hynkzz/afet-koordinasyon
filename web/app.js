@@ -321,6 +321,94 @@ document.getElementById("qr-ac").addEventListener("click", async () => {
   qrKutu.showModal();
 });
 
+// --- Kuyruk ---
+const kuyrukGovde = document.getElementById("kuyruk");
+const vakalar = new Map();
+const DURUM_ADI = { yeni: "Yeni", ekip_yonlendirildi: "Ekip yönlendirildi", kurtarildi: "Kurtarıldı" };
+const SONRAKI = { yeni: ["ekip_yonlendirildi", "Ekip Yönlendir"], ekip_yonlendirildi: ["kurtarildi", "Kurtarıldı"] };
+let kuyrukBekliyor = false;
+
+function vakaKaynagi(v) {
+  if (v.kaynak === "olay") return v.veri.kaynak === "kamera" ? "Kamera" : "Mikrofon";
+  if (v.kaynak === "mesaj") return "Düğüm " + v.veri.kaynak;
+  return "Portal " + v.id;
+}
+
+function vakaOzeti(v) {
+  if (v.kaynak === "olay") {
+    const ad = v.veri.etiket === "insan" ? "İnsan tespiti" : "Vuruş";
+    return ad + " · güven " + v.veri.guven.toFixed(2) + (v.veri.adet > 1 ? " · " + v.veri.adet + " kez" : "");
+  }
+  if (v.kaynak === "mesaj") return "SOS: " + v.veri.yuk;
+  return portalOzet(v.veri);
+}
+
+function durumGonder(id, durum, dugme) {
+  dugme.disabled = true;
+  fetch("/api/vaka/" + encodeURIComponent(id) + "/durum", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ durum }),
+  }).then((c) => { if (!c.ok) dugme.disabled = false; });
+}
+
+function kuyrukCiz() {
+  kuyrukBekliyor = false;
+  const acik = [...vakalar.values()]
+    .filter((v) => v.durum !== "kurtarildi")
+    .sort((a, b) => a.oncelik - b.oncelik || a.zaman.localeCompare(b.zaman));
+  kuyrukGovde.replaceChildren();
+  for (const v of acik) {
+    const s = kuyrukGovde.insertRow();
+    const asilsiz = v.kaynak === "portal" && v.veri.asilsiz;
+    if (asilsiz) s.className = "asilsiz";
+    else if (v.oncelik === 1 && v.durum === "yeni") s.className = "sos";
+    hucre(s, etiket("Ö" + v.oncelik, "o" + v.oncelik));
+    hucre(s, saatYaz(v.zaman));
+    hucre(s, vakaKaynagi(v));
+    hucre(s, vakaOzeti(v), "metin");
+    const islem = hucre(s, "", "islem");
+    const d = document.createElement("span");
+    d.className = "durum-etiketi " + v.durum;
+    d.textContent = DURUM_ADI[v.durum];
+    islem.append(d);
+    const sonraki = SONRAKI[v.durum];
+    if (sonraki) {
+      const b = document.createElement("button");
+      b.className = "kucuk";
+      b.textContent = sonraki[1];
+      b.addEventListener("click", () => durumGonder(v.id, sonraki[0], b));
+      islem.append(b);
+    }
+  }
+  document.getElementById("kuyruk-sayisi").textContent = acik.length;
+  const kurtarilan = [...vakalar.values()].filter((v) => v.durum === "kurtarildi").length;
+  document.getElementById("kurtarilan").textContent = kurtarilan ? kurtarilan + " kurtarıldı" : "";
+}
+
+function vakaAl(v) {
+  vakalar.set(v.id, v);
+  // Saniyede onlarca guncelleme gelebilir; tabloyu kare basina bir kez kur.
+  if (!kuyrukBekliyor) {
+    kuyrukBekliyor = true;
+    requestAnimationFrame(kuyrukCiz);
+  }
+}
+
+async function kuyrukYukle() {
+  const { kuyruk } = await (await fetch("/api/kuyruk")).json();
+  for (const [id, v] of vakalar) if (v.durum !== "kurtarildi") vakalar.delete(id);
+  kuyruk.forEach(vakaAl);
+}
+
+for (const b of document.querySelectorAll(".sekmeler button")) {
+  b.addEventListener("click", () => {
+    for (const d of document.querySelectorAll(".sekmeler button")) d.classList.toggle("secili", d === b);
+    document.getElementById("sekme-kuyruk").hidden = b.dataset.sekme !== "kuyruk";
+    document.getElementById("sekme-olaylar").hidden = b.dataset.sekme !== "olaylar";
+  });
+}
+
 // --- Durum raporu ---
 function raporAl(r) {
   document.getElementById("rapor-metin").textContent = r.metin;
@@ -388,6 +476,8 @@ function baglan() {
   const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
   ws.onopen = () => {
     bekleme = 1000;
+    // Kopuk kaldigimiz surede degisenleri kacirmamak icin kuyruk bastan alinir.
+    kuyrukYukle();
     durum.className = "durum bagli";
     durum.textContent = "Bağlı";
   };
@@ -398,6 +488,7 @@ function baglan() {
     else if (tip === "sinyal") sinyaller.set(veri.dugum_id, veri);
     else if (tip === "portal") portalAl(veri);
     else if (tip === "rapor") raporAl(veri);
+    else if (tip === "vaka") vakaAl(veri);
   };
   ws.onclose = () => {
     durum.className = "durum kopuk";

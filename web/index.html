@@ -23,9 +23,10 @@
     <div class="icerik"><div id="harita"></div></div>
   </section>
   <section id="p-olaylar" class="panel">
-    <h2>Olaylar <span class="ek" id="olay-sayisi">0</span></h2>
+    <h2><span class="sekmeler"><button data-sekme="kuyruk" class="secili">Kuyruk <span id="kuyruk-sayisi" class="ek">0</span></button><button data-sekme="olaylar">Son olaylar <span id="olay-sayisi" class="ek">0</span></button></span><span id="kurtarilan" class="ek"></span></h2>
     <div id="rapor" class="rapor"><div class="rapor-ust">Durum Raporu <span id="rapor-bilgi" class="ek">İlk rapor 1 dakika içinde</span></div><div id="rapor-metin"></div></div>
-    <div class="icerik kaydir"><table class="liste"><thead><tr><th>Saat</th><th>Tür</th><th>Kaynak</th><th class="sag">Güven</th><th class="sag">Adet</th></tr></thead><tbody id="olaylar"></tbody></table></div>
+    <div class="icerik kaydir" id="sekme-kuyruk"><table class="liste"><thead><tr><th>Ö</th><th>Saat</th><th>Kaynak</th><th>Ayrıntı</th><th>Durum</th></tr></thead><tbody id="kuyruk"></tbody></table></div>
+    <div class="icerik kaydir" id="sekme-olaylar" hidden><table class="liste"><thead><tr><th>Saat</th><th>Tür</th><th>Kaynak</th><th class="sag">Güven</th><th class="sag">Adet</th></tr></thead><tbody id="olaylar"></tbody></table></div>
   </section>
   <section id="p-mesajlar" class="panel">
     <h2>Mesajlar <button id="qr-ac" class="kucuk">Portal QR</button></h2>
