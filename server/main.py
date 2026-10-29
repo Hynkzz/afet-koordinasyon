@@ -142,8 +142,10 @@ async def omur(app: FastAPI):
     log.info("Veritabani: %d acik vaka, %d portal kaydi", len(vakalar.kuyruk()), len(portal.kayitlar))
     kaynak_adi = os.environ.get("AFET_KAYNAK", "yok")
     gorev = None
+    app.state.kaynak = None
     if kaynak_adi != "yok":
         kaynak = KAYNAKLAR[kaynak_adi](psk_oku())
+        app.state.kaynak = kaynak
         gorev = asyncio.create_task(kaynak.calistir(olay_isle, paket_isle, sinyal_isle))
         gorev.add_done_callback(kaynak_bitti)
     log.info("Veri kaynagi: %s", kaynak_adi)
@@ -208,6 +210,8 @@ async def vaka_kaydet(id: str, kaynak: str, oncelik: int, veri: dict):
 
 async def olay_isle(olay: Olay) -> dict:
     kayit = birlestirici.ekle(olay)
+    if app.state.kaynak:
+        await app.state.kaynak.olay_bildir(olay)
     await yayinci.yayinla("olay", kayit)
     await olay_vakasi(kayit)
     return kayit
@@ -246,7 +250,7 @@ async def paket_isle(paket: Paket):
 
 
 async def sinyal_isle(sinyal: Sinyal):
-    await yayinci.yayinla("sinyal", sinyal.model_dump(mode="json"))
+    await yayinci.yayinla("sinyal", sinyal.model_dump(mode="json", exclude_none=True))
 
 
 app = FastAPI(title="Afet Paneli", lifespan=omur)
