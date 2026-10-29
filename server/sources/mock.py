@@ -10,7 +10,7 @@ from server.sources.base import Kaynak
 DUGUMLER = ["d1", "d2", "d3", "d4", "d5", "d6"]
 HAZIR_MESAJLAR = ["Enkaz altindayim", "Yarali var", "Guvendeyim"]
 # Ornek siginaklarin cevresi; GPS'li mesajlar haritada bu bolgeye duser.
-BOLGE = {"lat": (38.410, 38.428), "lon": (27.118, 27.150)}
+BOLGE = {"lat": (39.805, 39.830), "lon": (34.790, 34.830)}
 
 
 def simdi() -> datetime:

@@ -56,7 +56,7 @@ Kutu oranlı, çünkü panel görüntüyü farklı boyutta çizebilir. YOLO'da
 
 ```json
 {"id": "d3-000017", "tur": "SOS", "kaynak": "d3", "hedef": "merkez", "ttl": 5,
- "yuk": "Enkaz altindayim", "gps": {"lat": 38.4192, "lon": 27.1287},
+ "yuk": "Enkaz altindayim", "gps": {"lat": 39.8195, "lon": 34.8080},
  "sayac": 17, "imza": "q8fH2k1Zb7Xw0pLmN4sT9A=="}
 ```
 ```json
@@ -128,7 +128,7 @@ QGIS'ten "GeoJSON, EPSG:4326" olarak dışa aktarılan dosya uyar.
 
 ```json
 {"type": "FeatureCollection", "features": [
-  {"type": "Feature", "geometry": {"type": "Point", "coordinates": [27.1287, 38.4192]},
+  {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8080, 39.8195]},
    "properties": {"ad": "Ornek Park Toplanma Alani", "kapasite": 1200, "kaynak": "AFAD"}}
 ]}
 ```

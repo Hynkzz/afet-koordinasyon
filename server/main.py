@@ -159,6 +159,7 @@ async def mesaj_gonder(istek: MesajIstek) -> Mesaj:
     return mesaj
 
 
+app.mount("/karolar", StaticFiles(directory=KOK / "data" / "tiles", check_dir=False), name="karolar")
 # API yollarindan sonra baglanmali; "/" her yolu yakalar.
 app.mount("/", StaticFiles(directory=KOK / "web", html=True, check_dir=False), name="web")
 

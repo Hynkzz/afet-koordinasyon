@@ -1,10 +1,10 @@
 {
   "type": "FeatureCollection",
   "features": [
-    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [27.1287, 38.4192]}, "properties": {"ad": "Ornek Park Toplanma Alani", "kapasite": 1200, "kaynak": "tahmin"}},
-    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [27.1402, 38.4237]}, "properties": {"ad": "Okul Bahcesi", "kapasite": 300, "kaynak": "tahmin"}},
-    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [27.1350, 38.4128]}, "properties": {"ad": "Spor Salonu", "kapasite": 800, "kaynak": "tahmin"}},
-    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [27.1215, 38.4260]}, "properties": {"ad": "Cami Avlusu", "kapasite": 250, "kaynak": "tahmin"}},
-    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [27.1480, 38.4171]}, "properties": {"ad": "Pazar Yeri", "kapasite": 600, "kaynak": "tahmin"}}
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8080, 39.8195]}, "properties": {"ad": "Ornek Park Toplanma Alani", "kapasite": 1200, "kaynak": "tahmin"}},
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8165, 39.8240]}, "properties": {"ad": "Okul Bahcesi", "kapasite": 300, "kaynak": "tahmin"}},
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.7990, 39.8125]}, "properties": {"ad": "Spor Salonu", "kapasite": 800, "kaynak": "tahmin"}},
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8230, 39.8150]}, "properties": {"ad": "Cami Avlusu", "kapasite": 250, "kaynak": "tahmin"}},
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.7935, 39.8255]}, "properties": {"ad": "Pazar Yeri", "kapasite": 600, "kaynak": "tahmin"}}
   ]
 }

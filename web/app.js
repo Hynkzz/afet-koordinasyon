@@ -111,11 +111,17 @@ function kameraCiz() {
 requestAnimationFrame(kameraCiz);
 
 // --- Harita ---
-const harita = L.map("harita", { zoomControl: true }).setView([38.419, 27.134], 15);
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution: "&copy; OpenStreetMap katkıcıları",
+// Karolar data/tiles/yozgat.pmtiles dosyasindan gelir; internet gerekmez.
+const BOLGE = L.latLngBounds([39.75, 34.72], [39.87, 34.9]);
+const harita = L.map("harita", { maxBounds: BOLGE.pad(0.1), minZoom: 12, maxZoom: 18 }).setView([39.818, 34.808], 14);
+protomapsL.leafletLayer({
+  url: "/karolar/yozgat.pmtiles",
+  flavor: "dark",
+  lang: "tr",
+  maxDataZoom: 15,
+  attribution: "&copy; OpenStreetMap katkıcıları, Protomaps",
 }).addTo(harita);
+harita.attributionControl.setPrefix("Leaflet");
 let mesajNoktasi = 0;
 
 function popup(satirlar) {
