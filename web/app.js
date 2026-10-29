@@ -122,6 +122,45 @@ protomapsL.leafletLayer({
   attribution: "&copy; OpenStreetMap katkıcıları, Protomaps",
 }).addTo(harita);
 harita.attributionControl.setPrefix("Leaflet");
+const katman = {
+  siginak: L.layerGroup().addTo(harita),
+  mesaj: L.layerGroup().addTo(harita),
+  // Renk yalnizca uyari-kritik araliginda: yogunluk = bekleyen vaka.
+  isi: L.heatLayer([], { radius: 28, blur: 22, maxZoom: 17, gradient: { 0.3: renk.uyari, 0.7: renk.kritik, 1: "#ff9b9e" } }).addTo(harita),
+  dugum: L.layerGroup().addTo(harita),
+  kapsama: L.layerGroup(),
+  sensor: L.layerGroup().addTo(harita),
+};
+L.control.layers(null, {
+  "Sığınaklar": katman.siginak,
+  "Mesajlar ve SOS": katman.mesaj,
+  "Isı haritası (açık vakalar)": katman.isi,
+  "Düğümler": katman.dugum,
+  "Kapsama alanları": katman.kapsama,
+  "Kamera ve mikrofon": katman.sensor,
+}).addTo(harita);
+const dugumIsaretleri = new Map();
+
+fetch("/api/dugumler")
+  .then((c) => c.json())
+  .then((veri) => {
+    for (const f of veri.features) {
+      const [lon, lat] = f.geometry.coordinates;
+      const p = f.properties;
+      if (p.tur === "dugum") {
+        L.circle([lat, lon], { radius: p.menzil_m, color: renk.notr, weight: 1, dashArray: "4 4", fillOpacity: 0.06 })
+          .addTo(katman.kapsama);
+        const m = L.circleMarker([lat, lon], { radius: 5, color: renk.panel, weight: 2, fillColor: renk.notr, fillOpacity: 1 })
+          .bindPopup(popup([["Düğüm " + p.id], [null, "Menzil: " + p.menzil_m + " m (" + p.kaynak + ")"]]))
+          .addTo(katman.dugum);
+        dugumIsaretleri.set(p.id, m);
+      } else {
+        L.circleMarker([lat, lon], { radius: 4, color: "#fff", weight: 1, fillColor: renk["yazi-3"], fillOpacity: 1 })
+          .bindPopup(popup([[p.tur === "kamera" ? "Kamera " + p.id : "Mikrofon " + p.id], [null, "Konum: " + p.kaynak]]))
+          .addTo(katman.sensor);
+      }
+    }
+  });
 let mesajNoktasi = 0;
 
 function popup(satirlar) {
@@ -146,7 +185,7 @@ fetch("/api/siginaklar")
       const p = f.properties;
       L.circleMarker([lat, lon], { radius: 7, color: "#fff", weight: 2, fillColor: renk.notr, fillOpacity: 1 })
         .bindPopup(popup([[p.ad], [null, "Kapasite: " + p.kapasite + " kişi"], [null, "Kaynak: " + p.kaynak]]))
-        .addTo(harita);
+        .addTo(katman.siginak);
     }
     haritaOzet(veri.features.length);
   });
@@ -164,7 +203,7 @@ function haritayaMesaj(m) {
     fillColor: sos ? renk.kritik : renk.panel, fillOpacity: sos ? 0.9 : 0.8,
   })
     .bindPopup(popup([[sos ? "SOS" : "Mesaj"], [null, m.yuk], [null, m.kaynak + ", " + new Date().toLocaleTimeString("tr-TR", { hour12: false })]]))
-    .addTo(harita);
+    .addTo(katman.mesaj);
   mesajNoktasi++;
   haritaOzet();
 }
@@ -318,7 +357,7 @@ function portalAl(k) {
       fillColor: sos ? renk.kritik : renk.panel, fillOpacity: sos ? 0.9 : 0.8,
     })
       .bindPopup(popup([["Portal " + k.kod], [null, ozet], [null, "Konum: erişim noktası"]]))
-      .addTo(harita);
+      .addTo(katman.mesaj);
     if (!portalNoktalari.has(k.kod)) mesajNoktasi++;
     portalNoktalari.set(k.kod, nokta);
     haritaOzet();
@@ -421,6 +460,8 @@ function kuyrukCiz() {
     }
   }
   document.getElementById("kuyruk-sayisi").textContent = acik.length;
+  const AGIRLIK = { 1: 1, 2: 0.6, 3: 0.3 };
+  katman.isi.setLatLngs(acik.map((v) => v.konum || v.veri.gps).map((k, i) => k && [k.lat, k.lon, AGIRLIK[acik[i].oncelik]]).filter(Boolean));
   const kurtarilan = [...vakalar.values()].filter((v) => v.durum === "kurtarildi").length;
   document.getElementById("kurtarilan").textContent = kurtarilan ? kurtarilan + " kurtarıldı" : "";
 }
@@ -501,6 +542,7 @@ function grafikleriGuncelle() {
     g.data.datasets[0].backgroundColor = veri.map((v) => durumRengi(v, esik));
     g.update();
   }
+  for (const [id, s] of sinyaller) dugumIsaretleri.get(id)?.setStyle({ fillColor: durumRengi(s.rssi, ESIK.rssi) });
 }
 gRssi.options.plugins.tooltip.callbacks = { label: (b) => b.raw[1] + " dBm" };
 gOran.options.plugins.tooltip.callbacks = { label: (b) => "%" + b.raw };

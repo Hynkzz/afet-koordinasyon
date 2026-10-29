@@ -178,3 +178,8 @@ dialog p, dialog form { margin: 8px 16px; }
 #kanallar button.cokuk { border-color: var(--kritik); color: var(--kritik); }
 .iletim { color: var(--yazi-3); font-size: 11px; white-space: nowrap; }
 .iletim.hata { color: var(--kritik); }
+
+a.dugme { display: inline-block; padding: 1px 8px; font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--yazi); background: #24282d; border: 1px solid var(--cizgi); border-radius: 3px; text-decoration: none; }
+a.dugme:hover { border-color: var(--notr); }
+.leaflet-control-layers { background: var(--panel); color: var(--yazi); border: 1px solid var(--cizgi) !important; }
+.leaflet-control-layers-expanded { padding: 6px 10px; }
