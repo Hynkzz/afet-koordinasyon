@@ -184,3 +184,9 @@ a.dugme { display: inline-block; padding: 1px 8px; font-size: 11px; font-weight:
 a.dugme:hover { border-color: var(--notr); }
 .leaflet-control-layers { background: var(--panel); color: var(--yazi); border: 1px solid var(--cizgi) !important; }
 .leaflet-control-layers-expanded { padding: 6px 10px; }
+
+.senaryo { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--yazi-2); }
+.senaryo select { font: inherit; color: var(--yazi); background: #24282d; border: 1px solid var(--cizgi); border-radius: 3px; padding: 3px 6px; max-width: 260px; }
+.senaryo button { padding: 3px 10px; font-size: 12px; }
+.senaryo button.calisiyor { border-color: var(--uyari); color: var(--uyari); }
+#senaryo-durum { color: var(--yazi-2); font-variant-numeric: tabular-nums; max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -489,6 +489,70 @@ for (const b of document.querySelectorAll(".sekmeler button")) {
   });
 }
 
+// --- Senaryo ---
+const senaryoSec = document.getElementById("senaryo-sec");
+const senaryoDugme = document.getElementById("senaryo-dugme");
+const senaryoBilgi = document.getElementById("senaryo-durum");
+let senaryoDurumu = { durum: "bos" };
+
+function dakika(sn) {
+  return Math.floor(sn / 60) + ":" + String(Math.floor(sn % 60)).padStart(2, "0");
+}
+
+function senaryoCiz() {
+  const d = senaryoDurumu;
+  const calisiyor = d.durum === "calisiyor";
+  senaryoDugme.textContent = calisiyor ? "Durdur" : "Senaryoyu başlat";
+  senaryoDugme.classList.toggle("calisiyor", calisiyor);
+  senaryoSec.disabled = calisiyor;
+  if (d.durum === "bos") {
+    senaryoBilgi.textContent = "";
+    return;
+  }
+  const gecen = calisiyor ? (Date.now() - new Date(d.baslangic)) / 1000 : d.sure;
+  const ad = { calisiyor: "", bitti: "Bitti · ", durduruldu: "Durduruldu · " }[d.durum];
+  senaryoBilgi.textContent = ad + d.adim + "/" + d.toplam + " · " + dakika(Math.min(gecen, d.sure)) + " / " +
+    dakika(d.sure) + (d.not_ ? " · " + d.not_ : "");
+  senaryoBilgi.title = d.ad;
+}
+
+function senaryoAl(d) {
+  senaryoDurumu = d;
+  senaryoCiz();
+}
+setInterval(() => senaryoDurumu.durum === "calisiyor" && senaryoCiz(), 1000);
+
+fetch("/api/senaryolar")
+  .then((c) => c.json())
+  .then(({ senaryolar, durum }) => {
+    for (const s of senaryolar) {
+      const o = document.createElement("option");
+      o.value = s.dosya;
+      o.textContent = s.ad + " (" + dakika(s.sure) + ")";
+      o.title = s.aciklama;
+      senaryoSec.append(o);
+    }
+    if (!senaryolar.length) senaryoDugme.disabled = true;
+    senaryoAl(durum);
+  });
+
+senaryoDugme.addEventListener("click", async () => {
+  if (senaryoDurumu.durum === "calisiyor") {
+    await fetch("/api/senaryo/durdur", { method: "POST" });
+    return;
+  }
+  const temizle = document.getElementById("senaryo-temizle").checked;
+  if (temizle && !confirm("Kuyruktaki tüm vakalar ve portal kayıtları silinecek. Devam edilsin mi?")) return;
+  senaryoDugme.disabled = true;
+  const cevap = await fetch("/api/senaryo/baslat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dosya: senaryoSec.value, temizle }),
+  });
+  senaryoDugme.disabled = false;
+  if (!cevap.ok) senaryoBilgi.textContent = "Başlatılamadı: " + (await cevap.json()).detail;
+});
+
 // --- Durum raporu ---
 function raporAl(r) {
   document.getElementById("rapor-metin").textContent = r.metin;
@@ -568,6 +632,9 @@ function paketAl({ tip, veri, alindi }) {
   else if (tip === "rapor") raporAl(veri);
   else if (tip === "vaka") vakaAl(veri);
   else if (tip === "kanallar") kanallarCiz(veri.kanallar);
+  else if (tip === "senaryo") senaryoAl(veri);
+  // Kuyruk temizlendi: listeleri bastan kurmanin en kisa yolu sayfayi yenilemek.
+  else if (tip === "sifirla") location.reload();
 }
 
 function baglan() {
