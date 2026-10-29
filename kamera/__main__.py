@@ -68,7 +68,12 @@ def main():
     # Video dosyasi kamera gibi davransin: kendi hizinda oynatilir, model hizinda degil.
     kare_suresi = 1 / (cap.get(cv2.CAP_PROP_FPS) or 25) if dosya and not secim.olc else 0
     # Adreste parola olabilir (rtsp://kullanici:parola@...); panele yalnizca sunucu adi gider.
-    ad = Path(secim.kaynak).name if dosya else (secim.kaynak.split("@")[-1].split("/")[0] if canli and "://" in secim.kaynak else f"kamera {secim.kaynak}")
+    if dosya:
+        ad = Path(secim.kaynak).name
+    elif secim.kaynak.isdigit():
+        ad = f"kamera {secim.kaynak}"
+    else:
+        ad = secim.kaynak.split("@")[-1].split("/")[0]
 
     sureler, son_olay, son_kare, kare_no = [], 0.0, 0.0, 0
     sonraki = time.monotonic()
