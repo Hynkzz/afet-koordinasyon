@@ -32,7 +32,9 @@ def main():
     if not shutil.which(secim.pmtiles):
         sys.exit(f"pmtiles araci bulunamadi: {secim.pmtiles}")
 
-    with urllib.request.urlopen(YAPILAR) as cevap:
+    # Sunucu Python'un varsayilan User-Agent'ini 403 ile reddediyor.
+    istek = urllib.request.Request(YAPILAR, headers={"User-Agent": "afet-projesi-karo-indir"})
+    with urllib.request.urlopen(istek) as cevap:
         son = json.load(cevap)[-1]["key"]
     print(f"Kaynak: https://build.protomaps.com/{son}")
 
