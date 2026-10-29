@@ -16,13 +16,15 @@ from fastapi.staticfiles import StaticFiles
 
 from server import llm
 from server import portal as portal_modulu
+from server import senaryo as senaryo_modulu
 from server.crypto import GecersizPaket, Sifreleyici, psk_oku
 from server.db import Vakalar
 from server.kanal import KANALLAR, Kanallar
-from server.models import Dugumler, DurumIstek, KanalIstek, Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
+from server.models import Dugumler, DurumIstek, KanalIstek, SenaryoIstek, Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
 from server.sources.mock import MockKaynak
 
 KOK = Path(__file__).resolve().parent.parent
+SENARYO_DIZINI = KOK / "scenarios"
 BIRLESTIRME_SURESI = 3.0
 RAPOR_ARALIGI = 60
 RAPOR_PENCERESI_DK = 10
@@ -158,6 +160,7 @@ async def omur(app: FastAPI):
         gorev.cancel()
     for g in list(portal.gorevler):
         g.cancel()
+    oynatici.durdur()
     vakalar.kapat()
 
 
@@ -380,6 +383,70 @@ async def kanal_ayarla(ad: str, istek: KanalIstek) -> list[dict]:
 
 
 portal = portal_modulu.Portal(yayinci.yayinla, portal_ilet)
+
+
+async def senaryo_mesaj(adim: senaryo_modulu.MesajAdimi):
+    # Gercek dugum gibi sifrelenir ve ayni cozme yolundan gecer.
+    sayac = time.time_ns() // 1000
+    taslak = Taslak(id=f"{adim.dugum}-{sayac}", tur=adim.tur, kaynak=adim.dugum, hedef="merkez", ttl=4,
+                    yuk=adim.yuk, gps=adim.gps, sayac=sayac)
+    await paket_isle(app.state.sifreleyici.sifrele(taslak))
+
+
+async def senaryo_portal(kimlik: str, adim: senaryo_modulu.PortalAdimi):
+    kayit, _ = await portal.cagri(f"senaryo-{kimlik}", adim.durum)
+    if adim.kisi or adim.yarali or adim.tarif or adim.mesaj:
+        await portal.ayrinti(kayit["kod"], adim.model_dump(include={"kisi", "yarali", "tarif", "mesaj"}, exclude_none=True))
+
+
+async def senaryo_kanal(ad: str, acik: bool):
+    kanallar.ayarla(ad, acik)
+    await yayinci.yayinla("kanallar", {"kanallar": kanallar.durum()})
+
+
+def kaynagi_sustur(sessiz: bool):
+    if app.state.kaynak:
+        app.state.kaynak.sustur(sessiz)
+
+
+oynatici = senaryo_modulu.Oynatici(olay_isle, senaryo_mesaj, senaryo_portal, senaryo_kanal, yayinci.yayinla,
+                                   kaynagi_sustur)
+
+
+@app.get("/api/senaryolar")
+async def senaryolar() -> dict:
+    return {"senaryolar": senaryo_modulu.listele(SENARYO_DIZINI), "durum": oynatici.durum}
+
+
+@app.post("/api/senaryo/baslat")
+async def senaryo_baslat(istek: SenaryoIstek) -> dict:
+    try:
+        s = senaryo_modulu.yukle(SENARYO_DIZINI, istek.dosya)
+    except FileNotFoundError:
+        raise HTTPException(404, "senaryo yok")
+    if oynatici.gorev and not oynatici.gorev.done():
+        raise HTTPException(409, "senaryo zaten calisiyor")
+    if istek.temizle:
+        # Demo her seferinde ayni ekrandan baslasin: eski vakalar, portal kayitlari ve listeler silinir.
+        vakalar.temizle()
+        portal.kayitlar.clear()
+        portal.son_cagri.clear()
+        yayinci.son_yayinlar.clear()
+        yayinci.gecmis.clear()
+        birlestirici._son.clear()
+        log.info("Kuyruk ve portal kayitlari temizlendi")
+        await yayinci.yayinla("sifirla", {})
+    for ad in kanallar.acik:
+        kanallar.ayarla(ad, True)
+    await yayinci.yayinla("kanallar", {"kanallar": kanallar.durum()})
+    oynatici.baslat(s)
+    return {"ad": s.ad, "sure": s.sure}
+
+
+@app.post("/api/senaryo/durdur")
+async def senaryo_durdur() -> dict:
+    oynatici.durdur()
+    return oynatici.durum
 portal_modulu.kur(app, portal)
 app.mount("/karolar", StaticFiles(directory=KOK / "data" / "tiles", check_dir=False), name="karolar")
 # API yollarindan sonra baglanmali; "/" her yolu yakalar.

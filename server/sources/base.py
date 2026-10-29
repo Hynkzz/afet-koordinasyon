@@ -21,3 +21,6 @@ class Kaynak(ABC):
 
     async def olay_bildir(self, olay: Olay):
         """Sunucuya bir olay geldi (kaynaktan ya da HTTP'den). Simulasyon dugumleri acil moda alabilir."""
+
+    def sustur(self, sessiz: bool):
+        """Senaryo oynarken kaynagin kendi olay ve mesajlarini durdurmasi icin; sinyal akmaya devam eder."""

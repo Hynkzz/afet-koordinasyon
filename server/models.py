@@ -133,3 +133,8 @@ class Dugum(BaseModel):
 class Dugumler(BaseModel):
     type: Literal["FeatureCollection"]
     features: list[Dugum]
+
+
+class SenaryoIstek(Sema):
+    dosya: Annotated[str, Field(min_length=1, max_length=100)]
+    temizle: bool = False

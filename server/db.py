@@ -100,5 +100,10 @@ class Vakalar:
             sorgu = self.baglanti.execute("SELECT * FROM vakalar ORDER BY zaman")
         return [self._sozluk(s) for s in sorgu]
 
+    def temizle(self):
+        with self.baglanti:
+            self.baglanti.execute("DELETE FROM vakalar")
+            self.baglanti.execute("DELETE FROM gecmis")
+
     def sayilar(self) -> dict[str, int]:
         return {d: n for d, n in self.baglanti.execute("SELECT durum, COUNT(*) FROM vakalar GROUP BY durum")}

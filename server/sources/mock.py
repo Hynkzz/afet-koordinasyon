@@ -32,9 +32,12 @@ class MockKaynak(Kaynak):
     def __init__(self, psk: bytes):
         # Gercek dugum gibi kendi sifreleyicisiyle paketler; boylece sunucunun cozme yolu da calisir.
         self.sifreleyici = Sifreleyici(psk)
-        self.sayac = itertools.count(1)
+        self.sessiz = False
         self.pil = {d: random.uniform(40, 100) for d in DUGUMLER}
         self.acil_bitis = {d: 0.0 for d in DUGUMLER}
+
+    def sustur(self, sessiz: bool):
+        self.sessiz = sessiz
 
     def mod(self, dugum: str) -> str:
         return "acil" if time.monotonic() < self.acil_bitis[dugum] else "dusuk_guc"
@@ -63,6 +66,8 @@ class MockKaynak(Kaynak):
             x, y = random.uniform(0.1, 0.7), random.uniform(0.2, 0.5)
             w, h = random.uniform(0.08, 0.15), random.uniform(0.25, 0.4)
             for _ in range(random.randint(6, 20)):
+                if self.sessiz:
+                    break
                 x = min(max(x + random.uniform(-0.02, 0.02), 0), 1 - w)
                 await gonder(Olay(
                     olay_id=f"mock-kam-{next(no)}", kaynak="kamera", etiket="insan",
@@ -77,6 +82,8 @@ class MockKaynak(Kaynak):
         while True:
             await asyncio.sleep(random.uniform(10, 30))
             for _ in range(random.randint(2, 5)):
+                if self.sessiz:
+                    break
                 await gonder(Olay(
                     olay_id=f"mock-mik-{next(no)}", kaynak="mikrofon", etiket="vurus",
                     guven=round(random.uniform(0.4, 0.85), 2), zaman=simdi(),
@@ -87,10 +94,11 @@ class MockKaynak(Kaynak):
         while True:
             await asyncio.sleep(random.uniform(8, 25))
             canli = [d for d in DUGUMLER if self.pil[d] > 0]
-            if not canli:
+            if not canli or self.sessiz:
                 continue
             dugum = random.choice(canli)
-            sayac = next(self.sayac)
+            # Sayac zamandan: senaryo da ayni dugum adiyla gonderir, sayac kimin gonderdiginden bagimsiz artsin.
+            sayac = time.time_ns() // 1000
             sos = random.random() < 0.3
             if sos:
                 self.acil_yap([dugum])
