@@ -170,7 +170,6 @@ def test_ilk_dokunusta_kural_oncelik(ortam):
 
 def test_ayrintidan_sonra_triyaj_guncellenir(ortam, monkeypatch):
     istemci, nesne, saat = ortam
-    monkeypatch.delenv("AFET_LLM_ADRES", raising=False)
     kod = cagri(istemci, "yarali")
     assert nesne.kayitlar[kod]["triyaj"]["oncelik"] == 2
     with istemci.websocket_connect("/ws") as ws:
