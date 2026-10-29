@@ -132,3 +132,18 @@ def test_telefon_numarasi_kisi_sayisi_sanilmaz():
     # Gercek deprem mesajinda goruldu: numaranin hemen arkasinda "kisi" yaziyordu.
     sonuc = llm.kural_triyaj("Ulasilamayan numara 05325182777 kisi enkaz altinda")
     assert sonuc.kisi_sayisi is None
+
+
+def test_rapor_uydurma_sayi_iceriyorsa_kurala_duser(llm_var):
+    llm_var("Son 10 dakikada 7 SOS geldi.")
+    assert calistir(llm.durum_raporu(OZET))[1] == "kural"
+
+
+def test_rapor_dugum_numarasi_uydurma_sayilmaz(llm_var):
+    llm_var("Son 10 dakikada 3 SOS geldi, d4 zayıf.")
+    assert calistir(llm.durum_raporu(OZET))[1] == "llm"
+
+
+def test_rapor_olgulari_turkce_satirlar():
+    olgular = llm.rapor_olgulari(OZET)
+    assert "Gelen SOS sayısı: 3" in olgular and "oncelik1" not in olgular
