@@ -162,6 +162,23 @@ düğümün konumunda gösterilir.
 birlikte GeoJSON olarak indirir; QGIS'te açılabilir. Ad ve cihaz kimliği
 dosyaya yazılmaz.
 
+## Enerji simülasyonu
+
+Sahte veri üreticisinde her düğümün pili zamanla azalır. İki mod var:
+
+| Mod | Akım | Ölçüm aralığı | Bu akımla 2000 mAh pil |
+|---|---|---|---|
+| Düşük güç | 5 mA | 5 sn | 400 saat |
+| Acil | 20 mA | 1 sn | 100 saat |
+
+Kamera ya da mikrofon olayı gelince (kaynaktan ya da `POST /api/olay` ile)
+tüm düğümler, bir düğümden SOS gelince o düğüm 2 dakika acil moda geçer.
+Pili biten düğüm susar. Sinyal panelinde pil yüzdesi ve acil moddaki düğümler
+görünür. Demoda görünsün diye simülasyon saati hızlandırılmıştır: 1 sn = 2 dk
+(`AFET_ENERJI_HIZ`). 2000 mAh ve 5 mA 12 Ekim planındaki örnekten, 20 mA
+tahmin; EEE'nin güç bütçesi gelince `server/sources/mock.py` güncellenecek.
+Pil ömrü sütunu bu varsayımlardan hesaplandı, ölçüm değil.
+
 ## Kanal simülasyonu
 
 Her giden mesaj (paneldeki SOS ve hazır mesajlar, portal kayıtları) msgpack
