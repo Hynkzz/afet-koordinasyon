@@ -1,6 +1,6 @@
 import pytest
 
-from server.main import birlestirici
+from server.main import birlestirici, kanallar
 
 
 @pytest.fixture(autouse=True)
@@ -10,3 +10,5 @@ def yalitilmis_ortam(monkeypatch, tmp_path):
     monkeypatch.setenv("AFET_LLM_ADRES", "")
     # Birlestirici modul duzeyinde; onceki testin olayi sonrakiyle birlesmesin.
     birlestirici._son.clear()
+    for ad in kanallar.acik:
+        kanallar.acik[ad] = True
