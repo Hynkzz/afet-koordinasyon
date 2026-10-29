@@ -98,6 +98,7 @@ afet-projesi/
   data/            örnek sığınaklar, düğüm yerleşimi, harita dosyası
   scenarios/       demo senaryoları
   olcumler/        ölçüm sonuçları
+  kamera/          YOLO ile insan tespiti (ayrı program, ayrı ortam)
   vurus/           ses kaydında vuruş tespiti (ayrı program)
   scripts/         ölçüm, veri ve karo indirme, hotspot/ erişim noktası
   tests/
@@ -151,6 +152,22 @@ Telefonla denemek: sunucuyu `--host 0.0.0.0` ile açın, telefonu aynı Wi-Fi
 ağına bağlayın, paneldeki QR kodu okutun. Telefonun portal penceresini
 kendiliğinden açması için erişim noktası betiği:
 [`scripts/hotspot/`](scripts/hotspot/README.md).
+
+## Kamera: YOLO insan tespiti
+
+Kameradan ya da video dosyasından kare okur, YOLO ile insan arar, bulduğunu
+`POST /api/olay` ile gönderir (en fazla 0,5 sn'de bir; sunucu zaten 3 sn içindeki
+tekrarları birleştirir). PyTorch ve ultralytics büyük olduğu için ana sunucunun
+bağımlılıklarına eklenmedi; ayrı bir ortama kurulur:
+
+```bash
+python -m venv ~/afet-yolo/venv
+~/afet-yolo/venv/bin/pip install torch torchvision ultralytics     # ~6 GB, CUDA dahil
+~/afet-yolo/venv/bin/python -m kamera --model model.pt --kaynak 0 --sunucu http://127.0.0.1:8000
+```
+
+`--kaynak` kamera numarası ya da video/görüntü klasörü; `--olc 300` yalnızca FPS
+ölçer. Model eğitimi ve ölçümler: `olcumler/` altında YOLO dosyaları.
 
 ## Vuruş tespiti
 
