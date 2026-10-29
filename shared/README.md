@@ -108,6 +108,8 @@ def paketle(psk, id, tur, kaynak, hedef, ttl, sayac, yuk, gps=None):
 | `rssi` | sayı, −120–0 | evet | dBm |
 | `paket_alim_orani` | sayı, 0–1 | evet | Son ölçüm penceresinde alınan / gönderilen paket |
 | `zaman` | ISO 8601 | evet | |
+| `pil` | sayı, 0–100 | hayır | Pil doluluk yüzdesi |
+| `mod` | `"dusuk_guc"` / `"acil"` | hayır | Düşük güçte seyrek, acilde sık ölçüm gönderilir |
 
 ```json
 {"dugum_id": "d3", "rssi": -71, "paket_alim_orani": 0.92, "zaman": "2026-10-29T14:03:10+03:00"}

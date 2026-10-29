@@ -18,3 +18,6 @@ class Kaynak(ABC):
         paket: Callable[[Paket], Awaitable[None]],
         sinyal: Callable[[Sinyal], Awaitable[None]],
     ): ...
+
+    async def olay_bildir(self, olay: Olay):
+        """Sunucuya bir olay geldi (kaynaktan ya da HTTP'den). Simulasyon dugumleri acil moda alabilir."""

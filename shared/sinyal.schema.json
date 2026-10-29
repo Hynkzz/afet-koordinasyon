@@ -5,14 +5,61 @@
   "description": "Bir mesh dugumunun baglanti kalitesi olcumu.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["dugum_id", "rssi", "paket_alim_orani", "zaman"],
+  "required": [
+    "dugum_id",
+    "rssi",
+    "paket_alim_orani",
+    "zaman"
+  ],
   "properties": {
-    "dugum_id": { "type": "string", "minLength": 1, "maxLength": 32 },
-    "rssi": { "description": "dBm cinsinden.", "type": "number", "minimum": -120, "maximum": 0 },
-    "paket_alim_orani": { "type": "number", "minimum": 0, "maximum": 1 },
-    "zaman": { "type": "string", "format": "date-time" }
+    "dugum_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "rssi": {
+      "description": "dBm cinsinden.",
+      "type": "number",
+      "minimum": -120,
+      "maximum": 0
+    },
+    "paket_alim_orani": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "zaman": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "pil": {
+      "description": "Istege bagli: pil doluluk yuzdesi.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "mod": {
+      "description": "Istege bagli: dusuk_guc seyrek, acil sik olcum gonderir.",
+      "enum": [
+        "dusuk_guc",
+        "acil"
+      ]
+    }
   },
   "examples": [
-    { "dugum_id": "d3", "rssi": -71, "paket_alim_orani": 0.92, "zaman": "2026-10-29T14:03:10+03:00" }
+    {
+      "dugum_id": "d3",
+      "rssi": -71,
+      "paket_alim_orani": 0.92,
+      "zaman": "2026-10-29T14:03:10+03:00"
+    },
+    {
+      "dugum_id": "d3",
+      "rssi": -71,
+      "paket_alim_orani": 0.92,
+      "zaman": "2026-10-29T14:03:10+03:00",
+      "pil": 64.5,
+      "mod": "acil"
+    }
   ]
 }

@@ -77,6 +77,8 @@ class Sinyal(Sema):
     rssi: Annotated[float, Field(ge=-120, le=0)]
     paket_alim_orani: Oran
     zaman: AwareDatetime
+    pil: Annotated[float, Field(ge=0, le=100)] | None = None
+    mod: Literal["dusuk_guc", "acil"] | None = None
 
 
 class SiginakOzellik(BaseModel):
