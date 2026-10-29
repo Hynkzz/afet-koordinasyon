@@ -499,7 +499,7 @@ fetch("/api/rapor").then((c) => c.json()).then((r) => r && raporAl(r));
 
 // --- Sinyal ---
 // Renk durumu anlatir: esigin altindaki dugum turuncu/kirmizi, digerleri gri.
-const ESIK = { rssi: [-85, -95], oran: [80, 60] };
+const ESIK = { rssi: [-85, -95], oran: [80, 60], pil: [40, 20] };
 const sinyaller = new Map();
 Chart.defaults.color = renk["yazi-2"];
 Chart.defaults.font.family = "system-ui, sans-serif";
@@ -524,6 +524,7 @@ function grafik(id, min, max, adim) {
 
 const gRssi = grafik("g-rssi", -110, -30, 20);
 const gOran = grafik("g-oran", 0, 100, 20);
+const gPil = grafik("g-pil", 0, 100, 20);
 
 function durumRengi(deger, [uyari, kritik]) {
   if (deger <= kritik) return renk.kritik;
@@ -535,8 +536,13 @@ function grafikleriGuncelle() {
   const dugumler = [...sinyaller.keys()].sort();
   const rssi = dugumler.map((d) => sinyaller.get(d).rssi);
   const oran = dugumler.map((d) => Math.round(sinyaller.get(d).paket_alim_orani * 100));
-  for (const [g, veri, esik] of [[gRssi, rssi, ESIK.rssi], [gOran, oran, ESIK.oran]]) {
-    g.data.labels = dugumler;
+  const pil = dugumler.map((d) => sinyaller.get(d).pil ?? 0);
+  // Acil moddaki dugum etiketinde belirtilir; renk yine yalnizca durum (esik) icin.
+  const etiketler = dugumler.map((d) => d + (sinyaller.get(d).mod === "acil" ? " · acil" : ""));
+  const acilSayisi = dugumler.filter((d) => sinyaller.get(d).mod === "acil").length;
+  document.getElementById("mod-ozet").textContent = acilSayisi ? acilSayisi + " düğüm acil modda" : "düşük güç";
+  for (const [g, veri, esik] of [[gRssi, rssi, ESIK.rssi], [gOran, oran, ESIK.oran], [gPil, pil, ESIK.pil]]) {
+    g.data.labels = etiketler;
     // RSSI negatif; cubuk eksenin solundan baslasin diye taban en alt degerde.
     g.data.datasets[0].data = g === gRssi ? veri.map((v) => [-110, v]) : veri;
     g.data.datasets[0].backgroundColor = veri.map((v) => durumRengi(v, esik));
@@ -546,6 +552,7 @@ function grafikleriGuncelle() {
 }
 gRssi.options.plugins.tooltip.callbacks = { label: (b) => b.raw[1] + " dBm" };
 gOran.options.plugins.tooltip.callbacks = { label: (b) => "%" + b.raw };
+gPil.options.plugins.tooltip.callbacks = { label: (b) => "%" + b.raw.toFixed(1) };
 // Sinyal saniyede dugum basina bir kez gelir; her pakette degil saniyede bir cizmek yeterli.
 setInterval(() => sinyaller.size && grafikleriGuncelle(), 1000);
 

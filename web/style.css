@@ -86,8 +86,9 @@ h3 { font-size: 12px; font-weight: 400; color: var(--yazi-2); margin: 0 0 4px; }
 .kaydir { overflow-y: auto; }
 .dikey { display: flex; flex-direction: column; }
 .dikey .kaydir { flex: 1; min-height: 0; }
-.ikili { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 8px 10px; }
-.grafik { display: flex; flex-direction: column; min-height: 0; }
+.uclu { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 8px 10px; }
+h3 .ek { color: var(--yazi-3); }
+.grafik { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .tuval { flex: 1; min-height: 0; position: relative; }
 
 #kamera, #harita { position: absolute; inset: 0; width: 100%; height: 100%; }
