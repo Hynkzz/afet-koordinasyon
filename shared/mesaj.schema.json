@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mesaj.schema.json",
+  "title": "Mesaj",
+  "description": "Cozulmus mesaj. Mesh aginda paket.schema.json bicimiyle tasinir.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "tur",
+    "kaynak",
+    "hedef",
+    "ttl",
+    "yuk",
+    "sayac",
+    "imza"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "tur": {
+      "enum": [
+        "SOS",
+        "hazir_mesaj",
+        "ack"
+      ]
+    },
+    "kaynak": {
+      "description": "Gonderen dugum kimligi.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "hedef": {
+      "description": "Alici dugum kimligi; \"*\" herkese yayin.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "ttl": {
+      "description": "Kalan atlama sayisi; her aktarimda 1 azalir.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16
+    },
+    "yuk": {
+      "description": "Mesaj metni. ack mesajinda onaylanan mesajin id'si.",
+      "type": "string",
+      "maxLength": 200
+    },
+    "gps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lat",
+        "lon"
+      ],
+      "properties": {
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      }
+    },
+    "sayac": {
+      "description": "Kaynak basina artan sayi; nonce ve tekrar korumasi icin.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "imza": {
+      "description": "ChaCha20-Poly1305 dogrulama etiketi (16 bayt, base64).",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{22}==$"
+    }
+  },
+  "examples": [
+    {
+      "id": "d3-000017",
+      "tur": "SOS",
+      "kaynak": "d3",
+      "hedef": "merkez",
+      "ttl": 5,
+      "yuk": "Enkaz altindayim",
+      "gps": {
+        "lat": 38.4192,
+        "lon": 27.1287
+      },
+      "sayac": 17,
+      "imza": "q8fH2k1Zb7Xw0pLmN4sT9A=="
+    },
+    {
+      "id": "merkez-000002",
+      "tur": "ack",
+      "kaynak": "merkez",
+      "hedef": "d3",
+      "ttl": 5,
+      "yuk": "d3-000017",
+      "sayac": 2,
+      "imza": "Zm9vYmFyYmF6cXV4MTIzNA=="
+    }
+  ]
+}

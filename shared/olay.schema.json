@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "olay.schema.json",
+  "title": "Olay",
+  "description": "Yapay zeka bolumunun urettigi tespit olayi (kamera veya mikrofon).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["olay_id", "kaynak", "etiket", "guven", "zaman"],
+  "properties": {
+    "olay_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "kaynak": { "enum": ["kamera", "mikrofon"] },
+    "etiket": { "enum": ["insan", "vurus"] },
+    "guven": { "type": "number", "minimum": 0, "maximum": 1 },
+    "zaman": { "type": "string", "format": "date-time" },
+    "kutu": {
+      "description": "Goruntu boyutuna oranla (0-1) sol ust kose ve boyut.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "w", "h"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 },
+        "w": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "h": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "etiket": { "const": "vurus" } } },
+      "then": { "not": { "required": ["kutu"] } }
+    }
+  ],
+  "examples": [
+    {
+      "olay_id": "kam1-000123",
+      "kaynak": "kamera",
+      "etiket": "insan",
+      "guven": 0.87,
+      "zaman": "2026-10-29T14:03:12.481+03:00",
+      "kutu": { "x": 0.42, "y": 0.31, "w": 0.12, "h": 0.35 }
+    },
+    {
+      "olay_id": "mik1-000045",
+      "kaynak": "mikrofon",
+      "etiket": "vurus",
+      "guven": 0.64,
+      "zaman": "2026-10-29T14:03:15.020+03:00"
+    }
+  ]
+}

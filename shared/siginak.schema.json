@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "siginak.schema.json",
+  "title": "Siginaklar",
+  "description": "Insaat bolumunun verdigi siginak listesi (GeoJSON FeatureCollection, RFC 7946). Koordinat sirasi [boylam, enlem].",
+  "type": "object",
+  "required": ["type", "features"],
+  "properties": {
+    "type": { "const": "FeatureCollection" },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "geometry", "properties"],
+        "properties": {
+          "type": { "const": "Feature" },
+          "geometry": {
+            "type": "object",
+            "required": ["type", "coordinates"],
+            "properties": {
+              "type": { "const": "Point" },
+              "coordinates": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "prefixItems": [
+                  { "type": "number", "minimum": -180, "maximum": 180 },
+                  { "type": "number", "minimum": -90, "maximum": 90 }
+                ]
+              }
+            }
+          },
+          "properties": {
+            "type": "object",
+            "required": ["ad", "kapasite", "kaynak"],
+            "properties": {
+              "ad": { "type": "string", "minLength": 1 },
+              "kapasite": { "type": "integer", "minimum": 0 },
+              "kaynak": { "enum": ["AFAD", "OSM", "tahmin"] }
+            }
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "geometry": { "type": "Point", "coordinates": [27.1287, 38.4192] },
+          "properties": { "ad": "Ornek Park Toplanma Alani", "kapasite": 1200, "kaynak": "AFAD" }
+        },
+        {
+          "type": "Feature",
+          "geometry": { "type": "Point", "coordinates": [27.1402, 38.4237] },
+          "properties": { "ad": "Okul Bahcesi", "kapasite": 300, "kaynak": "tahmin" }
+        }
+      ]
+    }
+  ]
+}

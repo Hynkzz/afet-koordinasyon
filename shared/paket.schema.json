@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "paket.schema.json",
+  "title": "Paket",
+  "description": "Mesajin mesh aginda tasindigi sifreli hali. Cozulunce mesaj.schema.json bicimine doner.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "tur", "kaynak", "hedef", "ttl", "sayac", "sifreli", "imza"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "tur": { "enum": ["SOS", "hazir_mesaj", "ack"] },
+    "kaynak": { "type": "string", "minLength": 1, "maxLength": 32 },
+    "hedef": { "type": "string", "minLength": 1, "maxLength": 32 },
+    "ttl": { "description": "Dogrulamaya dahil degil; ara dugumler azaltir.", "type": "integer", "minimum": 0, "maximum": 16 },
+    "sayac": { "type": "integer", "minimum": 0 },
+    "sifreli": { "description": "{\"yuk\": ..., \"gps\": ...} JSON'unun sifreli hali, base64.", "type": "string", "minLength": 1 },
+    "imza": { "description": "Poly1305 etiketi (16 bayt, base64).", "type": "string", "pattern": "^[A-Za-z0-9+/]{22}==$" }
+  },
+  "examples": [
+    {
+      "id": "d3-000017", "tur": "SOS", "kaynak": "d3", "hedef": "merkez", "ttl": 4, "sayac": 17,
+      "sifreli": "kJ3m0Qe7rZb1Yw8VxN2pL5sT6uA9cD0fG3hI4jK7lM1nO2pQ5rS8tU",
+      "imza": "q8fH2k1Zb7Xw0pLmN4sT9A=="
+    }
+  ]
+}
