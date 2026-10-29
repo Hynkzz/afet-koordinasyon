@@ -113,3 +113,21 @@ class DurumIstek(Sema):
 
 class KanalIstek(Sema):
     acik: bool
+
+
+class DugumOzellik(BaseModel):
+    id: Kimlik
+    tur: Literal["dugum", "kamera", "mikrofon"]
+    menzil_m: Annotated[float, Field(gt=0)] | None = None
+    kaynak: Literal["olcum", "hesap", "tahmin"]
+
+
+class Dugum(BaseModel):
+    type: Literal["Feature"]
+    geometry: Nokta
+    properties: DugumOzellik
+
+
+class Dugumler(BaseModel):
+    type: Literal["FeatureCollection"]
+    features: list[Dugum]

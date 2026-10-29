@@ -11,6 +11,7 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from server import llm
@@ -18,7 +19,7 @@ from server import portal as portal_modulu
 from server.crypto import GecersizPaket, Sifreleyici, psk_oku
 from server.db import Vakalar
 from server.kanal import KANALLAR, Kanallar
-from server.models import DurumIstek, KanalIstek, Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
+from server.models import Dugumler, DurumIstek, KanalIstek, Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
 from server.sources.mock import MockKaynak
 
 KOK = Path(__file__).resolve().parent.parent
@@ -129,6 +130,7 @@ async def omur(app: FastAPI):
     app.state.sifreleyici = Sifreleyici(psk_oku())
     app.state.siginaklar = Siginaklar.model_validate_json((KOK / "data" / "siginaklar.geojson").read_text())
     log.info("%d siginak yuklendi", len(app.state.siginaklar.features))
+    app.state.dugumler = Dugumler.model_validate_json((KOK / "data" / "dugumler.geojson").read_text())
     global vakalar
     vakalar = Vakalar(os.environ.get("AFET_DB", KOK / "data" / "afet.db"))
     portal.yukle(vakalar)
@@ -147,6 +149,8 @@ async def omur(app: FastAPI):
     rapor_gorevi.cancel()
     if gorev:
         gorev.cancel()
+    for g in list(portal.gorevler):
+        g.cancel()
     vakalar.kapat()
 
 
@@ -171,8 +175,30 @@ def kaynak_bitti(gorev: asyncio.Task):
         log.error("Arka plan gorevi durdu: %r", gorev.exception())
 
 
+def vaka_konumu(vaka: dict) -> dict | None:
+    """Portal ve GPS'li mesaj kendi konumunu tasir; digerleri onu ureten dugumun ya da sensorun konumunda."""
+    veri = vaka["veri"]
+    if veri.get("gps"):
+        return veri["gps"]
+    if vaka["kaynak"] == "mesaj":
+        alan = "id"
+    elif vaka["kaynak"] == "olay":
+        alan = "tur"
+    else:
+        return None
+    for f in app.state.dugumler.features:
+        if getattr(f.properties, alan) == veri["kaynak"]:
+            lon, lat = f.geometry.coordinates
+            return {"lat": lat, "lon": lon}
+    return None
+
+
+def konumlu(vaka: dict) -> dict:
+    return vaka | {"konum": vaka_konumu(vaka)}
+
+
 async def vaka_kaydet(id: str, kaynak: str, oncelik: int, veri: dict):
-    await yayinci.yayinla("vaka", vakalar.kaydet(id, kaynak, oncelik, veri))
+    await yayinci.yayinla("vaka", konumlu(vakalar.kaydet(id, kaynak, oncelik, veri)))
 
 
 async def olay_isle(olay: Olay) -> dict:
@@ -236,7 +262,7 @@ async def ws_ucu(ws: WebSocket):
 
 @app.get("/api/kuyruk")
 async def kuyruk() -> dict:
-    return {"kuyruk": vakalar.kuyruk(), "sayilar": vakalar.sayilar()}
+    return {"kuyruk": [konumlu(v) for v in vakalar.kuyruk()], "sayilar": vakalar.sayilar()}
 
 
 @app.post("/api/vaka/{id}/durum")
@@ -246,8 +272,34 @@ async def durum_degistir(id: str, istek: DurumIstek) -> dict:
     except KeyError:
         raise HTTPException(404, "vaka yok")
     log.info("Vaka %s: %s", id, istek.durum)
-    await yayinci.yayinla("vaka", vaka)
+    await yayinci.yayinla("vaka", konumlu(vaka))
     return vaka
+
+
+@app.get("/api/dugumler")
+async def dugumler() -> Dugumler:
+    return app.state.dugumler
+
+
+# Disa aktarilan dosya baska kurumlarla paylasilabilir; cihaz kimligi ve ad gibi kisisel alanlar cikarilir.
+DISA_AKTARILMAZ = {"cihaz", "ad"}
+
+
+@app.get("/api/disa-aktar")
+async def disa_aktar():
+    ozellikler = []
+    for v in vakalar.hepsi():
+        konum = vaka_konumu(v)
+        veri = {k: d for k, d in v["veri"].items() if k not in DISA_AKTARILMAZ}
+        ozellikler.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [konum["lon"], konum["lat"]]} if konum else None,
+            "properties": {"id": v["id"], "kaynak": v["kaynak"], "oncelik": v["oncelik"], "durum": v["durum"],
+                           "zaman": v["zaman"], "guncellendi": v["guncellendi"], "veri": veri},
+        })
+    dosya = f"afet-vakalar-{datetime.now():%Y%m%d-%H%M}.geojson"
+    return JSONResponse({"type": "FeatureCollection", "features": ozellikler},
+                        headers={"Content-Disposition": f'attachment; filename="{dosya}"'})
 
 
 @app.get("/api/rapor")

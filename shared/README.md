@@ -11,6 +11,7 @@ uymuyorsa sunucu reddeder ve sebebini döner.
 | `mesaj.schema.json` | — | Paketin çözülmüş hali; panel bunu gösterir |
 | `sinyal.schema.json` | Haberleşme | Düğüm bağlantı ölçümü güncellendiğinde |
 | `siginak.schema.json` | İnşaat | Bir kez, dosya olarak (`data/siginaklar.geojson`) |
+| `dugum.schema.json` | EEE + İnşaat | Bir kez, dosya olarak (`data/dugumler.geojson`) |
 
 Genel kurallar:
 - Alan adları Türkçe karaktersiz ve küçük harf.
@@ -132,6 +133,28 @@ QGIS'ten "GeoJSON, EPSG:4326" olarak dışa aktarılan dosya uyar.
    "properties": {"ad": "Ornek Park Toplanma Alani", "kapasite": 1200, "kaynak": "AFAD"}}
 ]}
 ```
+
+## Düğüm ve sensör yerleşimi (EEE + İnşaat → bilgisayar)
+
+Mesh düğümlerinin, kameranın ve mikrofonun nerede olduğu. Panel haritada
+düğümleri ve kapsama dairelerini çizer; kamera ve mikrofon olaylarını sensörün
+konumuna koyar. GeoJSON `FeatureCollection`, her Feature bir `Point`.
+
+| `properties` alanı | Tür | Açıklama |
+|---|---|---|
+| `id` | metin | Düğümde `sinyal` mesajlarındaki `dugum_id` ile aynı (`d1`…) |
+| `tur` | `"dugum"` / `"kamera"` / `"mikrofon"` | |
+| `menzil_m` | sayı | Yalnızca düğüm: kapsama yarıçapı, metre (bağlantı bütçesinden) |
+| `kaynak` | `"olcum"` / `"hesap"` / `"tahmin"` | Değer nereden geliyor |
+
+```json
+{"type": "FeatureCollection", "features": [
+  {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8085, 39.8188]},
+   "properties": {"id": "d1", "tur": "dugum", "menzil_m": 80, "kaynak": "hesap"}}
+]}
+```
+
+Şu anki `data/dugumler.geojson` örnektir: konumlar ve 80 m menzil tahmin.
 
 ## Kendi verinizi kontrol etmek
 

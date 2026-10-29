@@ -1,0 +1,13 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8085, 39.8188]}, "properties": {"id": "d1", "tur": "dugum", "menzil_m": 80, "kaynak": "tahmin"}},
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8150, 39.8215]}, "properties": {"id": "d2", "tur": "dugum", "menzil_m": 80, "kaynak": "tahmin"}},
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8010, 39.8140]}, "properties": {"id": "d3", "tur": "dugum", "menzil_m": 80, "kaynak": "tahmin"}},
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8210, 39.8162]}, "properties": {"id": "d4", "tur": "dugum", "menzil_m": 80, "kaynak": "tahmin"}},
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.7960, 39.8240]}, "properties": {"id": "d5", "tur": "dugum", "menzil_m": 80, "kaynak": "tahmin"}},
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8120, 39.8105]}, "properties": {"id": "d6", "tur": "dugum", "menzil_m": 80, "kaynak": "tahmin"}},
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8105, 39.8172]}, "properties": {"id": "kamera1", "tur": "kamera", "kaynak": "tahmin"}},
+    {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8108, 39.8169]}, "properties": {"id": "mikrofon1", "tur": "mikrofon", "kaynak": "tahmin"}}
+  ]
+}

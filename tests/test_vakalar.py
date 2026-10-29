@@ -76,7 +76,6 @@ def test_kapatip_acinca_veriler_durur(tmp_path):
 def istemci(monkeypatch):
     monkeypatch.setenv("AFET_PSK", base64.b64encode(os.urandom(32)).decode())
     monkeypatch.setenv("AFET_KAYNAK", "yok")
-    monkeypatch.delenv("AFET_LLM_ADRES", raising=False)
     with TestClient(app) as istemci:
         yield istemci
 
@@ -154,3 +153,36 @@ def test_sunucu_yeniden_acilinca_portal_kodu_calisir(monkeypatch):
     with TestClient(app) as istemci:
         sayfa = istemci.get("/portal/takip", params={"kod": kod}).text
     assert kod in sayfa and "Kurtarıldı" in sayfa
+
+
+def test_olay_vakasi_sensor_konumunda(istemci):
+    istemci.post("/api/olay", json=olay("vurus"))
+    assert kuyruk(istemci)[0]["konum"] == {"lat": 39.8169, "lon": 34.8108}
+
+
+def test_disa_aktarim_geojson_ve_kisisel_alan_yok(istemci):
+    istemci.post("/api/olay", json=olay("insan"))
+    kod = istemci.post("/portal/cagri", data={"durum": "enkaz"}, follow_redirects=False).headers["location"].split("/")[-1]
+    istemci.post(f"/portal/ayrinti/{kod}", data={"ad": "Ali Veli", "mesaj": "3. kat"})
+    cevap = istemci.get("/api/disa-aktar")
+    assert "attachment" in cevap.headers["content-disposition"]
+    veri = cevap.json()
+    assert veri["type"] == "FeatureCollection"
+    kaynaklar = {f["properties"]["kaynak"]: f for f in veri["features"]}
+    assert set(kaynaklar) == {"olay", "portal"}
+    assert kaynaklar["olay"]["geometry"]["coordinates"] == [34.8105, 39.8172]
+    portal = kaynaklar["portal"]["properties"]["veri"]
+    assert "ad" not in portal and "cihaz" not in portal
+    assert "Ali Veli" not in cevap.text
+
+
+def test_ornek_dugum_dosyasi_semaya_uyar():
+    import json
+    from pathlib import Path
+
+    from server.models import Dugumler
+
+    kok = Path(__file__).resolve().parent.parent
+    Dugumler.model_validate_json((kok / "data" / "dugumler.geojson").read_text())
+    for ornek in json.loads((kok / "shared" / "dugum.schema.json").read_text())["examples"]:
+        Dugumler.model_validate(ornek)
