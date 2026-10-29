@@ -10,7 +10,9 @@ kullanılır (`kamera/`).
 | `egit.sh` | Yalnızca C2A ile ince ayar ve ölçüm |
 | `karisik_hazirla.py` | C2A + COCO val2017 insan görüntülerinden karışık set |
 | `egit2.sh` | Karışık setle ince ayar ve iki test kümesinde ölçüm |
-| `c2a.yaml`, `karisik.yaml` | Veri tanımları |
+| `mot_hazirla.py` | MOT17/MOT20 etiketlerini YOLO biçimine çevirir |
+| `karisik2_hazirla.py`, `egit3.sh` | Karışık sete MOT17 eklenerek ince ayar (güvenlik kamerası açısı) |
+| `c2a.yaml`, `karisik.yaml`, `karisik2.yaml` | Veri tanımları |
 
 Sunucuya özgü notlar: `/tmp` 7 GB'lık RAM diski olduğu için pip `TMPDIR=~/.cache/piptmp`
 ile çalıştırılır; sunucuda `libGL` olmadığından `opencv-python-headless` kullanılır.

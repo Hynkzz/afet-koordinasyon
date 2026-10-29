@@ -1,0 +1,6 @@
+# C2A (CC BY 4.0) + COCO val2017 insan (CC BY 4.0) + MOT17 (CC BY-NC-SA 3.0). Tek sinif: insan.
+path: /home/floo4s/afet-yolo/veri/karisik2
+train: train/images
+val: val/images
+names:
+  0: person
