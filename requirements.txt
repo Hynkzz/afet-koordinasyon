@@ -4,4 +4,4 @@ cryptography
 
 # testler icin
 pytest
-httpx
+httpx2
