@@ -166,8 +166,24 @@ python -m venv ~/afet-yolo/venv
 ~/afet-yolo/venv/bin/python -m kamera --model model.pt --kaynak 0 --sunucu http://127.0.0.1:8000
 ```
 
-`--kaynak` kamera numarası ya da video/görüntü klasörü; `--olc 300` yalnızca FPS
-ölçer. Model eğitimi ve ölçümler: `olcumler/` altında YOLO dosyaları.
+`--kaynak` kamera numarası ya da video dosyası; `--olc 300` yalnızca FPS ölçer.
+
+### Kamera benzetimi (video ile)
+
+Gerçek kamera kurulamadığı için kamera yerine açık lisanslı gerçek afet ve
+kurtarma videoları kullanılır (Wikimedia Commons; lisanslar
+`data/gercek/video/KAYNAKLAR.txt` içinde, videolar depoya konmaz):
+
+```bash
+.venv/bin/python -m scripts.video_indir          # 4 video, ~105 MB
+~/afet-yolo/venv/bin/python -m kamera --model yolo11n.pt \
+    --kaynak data/gercek/video/hatay-uk-isar.webm --sunucu http://127.0.0.1:8000 --kare --dongu
+```
+
+Video kendi hızında oynatılır; `--kare` ile kareler (640 px, saniyede 5) panelin
+**Canlı İzleme** ekranına kutularıyla gider, `--dongu` bitince başa sarar.
+Yer seviyesinden çekilmiş bu videolarda hazır `yolo11n.pt` daha iyi sonuç verir;
+yüksekten bakan kamera için C2A + COCO karma model (`olcumler/` altında YOLO dosyaları).
 
 ## Vuruş tespiti
 

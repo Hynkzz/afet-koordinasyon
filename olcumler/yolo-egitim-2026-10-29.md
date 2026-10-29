@@ -47,3 +47,27 @@ sırasında LLM sunucusu da GPU'daydı (3,2 GB); ikisi birlikte 4 GB'a sığıyo
   seviyesi görüntüsü (COCO train2017) ile kapatılabilir; denenmedi.
 - C2A sentez görüntü olduğu için gerçek enkaz görüntüsündeki başarı bilinmiyor.
 - Saatte yanlış alarm ölçülmedi: içinde insan olmayan uzun bir kayıt gerekiyor.
+
+## Gerçek videolarla nitel deneme
+
+Kamera kurulamadığı için kamera benzetiminde kullanılan 4 açık lisanslı video
+(`scripts/video_indir.py`; Wikimedia Commons, CC BY / CC BY-SA / kamu malı). Videolarda
+kare etiketi olmadığı için doğruluk ölçülemez; aşağıdaki sayı yalnızca insan bulunan
+kare oranı (güven ≥ 0,5, her 5 karede bir).
+
+| Video | Hazır YOLO11n | Yalnız C2A | Karışık |
+|---|---|---|---|
+| 2023 Hatay, İngiliz kurtarma ekibi (152 kare) | %82 | %41 | %65 |
+| 2023 Hatay, Ukrayna kurtarma ekibi (296 kare) | %60 | %14 | %61 |
+| Çökmüş binada uluslararası kurtarma (229 kare) | %63 | %12 | %23 |
+| İskenderun yıkım (679 kare) | %48 | %73 | %51 |
+
+Her videodan bir kare gözle incelendi: yer seviyesinden çekilmiş bu görüntülerde hazır
+model karışık modelin kaçırdığı kişileri de buluyor (ör. enkazda yürüyen kurtarmacı);
+yakın plandaki kişiyi ikisi de kaçırdı. Bu yüzden video benzetiminde hazır model
+kullanılıyor. İskenderun videosu insanla dolu olduğu için yanlış alarm ölçümüne
+uygun değil.
+
+Ukrayna videosunun renk uzayı bilgisi bozuk ("reserved") olduğu için kareler önce
+çözülemiyor ve üç model de %0 veriyordu; bilgi kayıpsız düzeltildi
+(`scripts/video_indir.py`, `renk_duzelt`), sayılar düzeltilmiş videodan.
