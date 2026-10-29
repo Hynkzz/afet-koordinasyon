@@ -169,3 +169,12 @@ dialog p, dialog form { margin: 8px 16px; }
 #kuyruk td { vertical-align: top; }
 #kuyruk td.islem { width: 1%; }
 #kuyruk .durum-etiketi { display: block; margin: 0 0 3px; white-space: nowrap; }
+
+.kanallar { display: flex; align-items: center; gap: 6px; padding: 0 10px 6px; font-size: 12px; }
+.kanallar .ek { color: var(--yazi-3); margin-right: 2px; }
+#kanallar { display: flex; gap: 6px; }
+#kanallar button { padding: 2px 8px; font-size: 12px; }
+#kanallar button.acik { border-color: var(--normal); color: var(--normal); }
+#kanallar button.cokuk { border-color: var(--kritik); color: var(--kritik); }
+.iletim { color: var(--yazi-3); font-size: 11px; white-space: nowrap; }
+.iletim.hata { color: var(--kritik); }

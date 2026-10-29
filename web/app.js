@@ -174,6 +174,16 @@ const mesajlar = document.getElementById("mesajlar");
 const TUR_ADI = { SOS: "SOS", hazir_mesaj: "Hazır mesaj", ack: "Onay" };
 const kaynakAdi = (k) => (k === "merkez" ? "Merkez (gönderildi)" : k);
 
+function iletimEtiketi(iletim) {
+  const s = document.createElement("span");
+  s.className = "iletim" + (iletim.kanal ? "" : " hata");
+  s.textContent = iletim.kanal
+    ? iletim.kanal + " · " + iletim.boyut + " B" + (iletim.kirpildi ? " · kırpıldı" : "")
+    : "Gönderilemedi";
+  s.title = iletim.denenen.join("\n") + "\nJSON olsaydı: " + iletim.json_boyut + " B";
+  return s;
+}
+
 function mesajAl(m) {
   const sos = m.tur === "SOS";
   // Mesajda alinma zamani yok; panelin gordugu an yaziliyor.
@@ -183,7 +193,8 @@ function mesajAl(m) {
   hucre(s, saatYaz(zaman));
   hucre(s, kaynakAdi(m.kaynak));
   hucre(s, etiket(TUR_ADI[m.tur], sos ? "sos" : "mesaj"));
-  hucre(s, m.yuk, "metin");
+  const metinHucresi = hucre(s, m.yuk + " ", "metin");
+  if (m.iletim) metinHucresi.append(iletimEtiketi(m.iletim));
   satirSinirla(mesajlar);
 
   if (sos) {
@@ -213,7 +224,10 @@ async function mesajGonder(tur, yuk) {
     });
     if (!cevap.ok) throw new Error("sunucu " + cevap.status + " döndü");
     const m = await cevap.json();
-    gonderim.textContent = saatYaz(new Date()) + " gönderildi: " + yuk + " (" + m.id + ")";
+    gonderim.textContent = m.iletim.kanal
+      ? saatYaz(new Date()) + " gönderildi: " + yuk + " (" + m.iletim.kanal + ", " + m.iletim.boyut + " bayt)"
+      : "Gönderilemedi: tüm kanallar çökük ya da mesaj sığmıyor";
+    if (!m.iletim.kanal) gonderim.className = "gonderim hata";
   } catch (hata) {
     gonderim.className = "gonderim hata";
     gonderim.textContent = "Gönderilemedi: " + hata.message;
@@ -292,6 +306,7 @@ function portalAl(k) {
   turHucresi.append(" ", triyajEtiketi(k));
   if (k.onceden_asilsiz && !k.asilsiz) turHucresi.append(" ", etiket("Önceden asılsız", "asilsiz"));
   const metin = hucre(s, ozet + " ", "metin");
+  if (k.iletim) metin.append(iletimEtiketi(k.iletim), " ");
   metin.append(asilsizDugmesi(k));
   portalSatirlari.set(k.kod, s);
   satirSinirla(mesajlar);
@@ -320,6 +335,29 @@ document.getElementById("qr-ac").addEventListener("click", async () => {
   document.getElementById("qr-adres").textContent = adres;
   qrKutu.showModal();
 });
+
+// --- Kanallar ---
+const kanalKutusu = document.getElementById("kanallar");
+
+function kanallarCiz(liste) {
+  kanalKutusu.replaceChildren();
+  for (const k of liste) {
+    const b = document.createElement("button");
+    b.className = k.acik ? "acik" : "cokuk";
+    b.textContent = k.ad + (k.acik ? " açık" : " çökük");
+    b.title = "Sınır " + k.sinir + " bayt. Tıklayınca " + (k.acik ? "çökertilir" : "açılır") + ".";
+    b.addEventListener("click", () => {
+      b.disabled = true;
+      fetch("/api/kanal/" + k.ad, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acik: !k.acik }),
+      });
+    });
+    kanalKutusu.append(b);
+  }
+}
+fetch("/api/kanallar").then((c) => c.json()).then(kanallarCiz);
 
 // --- Kuyruk ---
 const kuyrukGovde = document.getElementById("kuyruk");
@@ -489,6 +527,7 @@ function baglan() {
     else if (tip === "portal") portalAl(veri);
     else if (tip === "rapor") raporAl(veri);
     else if (tip === "vaka") vakaAl(veri);
+    else if (tip === "kanallar") kanallarCiz(veri.kanallar);
   };
   ws.onclose = () => {
     durum.className = "durum kopuk";
