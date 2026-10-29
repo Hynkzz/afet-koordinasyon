@@ -65,3 +65,14 @@ def test_durum_raporu_ozeti():
     ozet = y.ozet()
     assert (ozet["vurus"], ozet["sos"], ozet["portal"], ozet["oncelik1"]) == (1, 2, 1, 1)
     assert ozet["zayif_dugum"] == ["d4"]
+
+
+def test_gecmis_son_yayinlari_ve_portal_kayitlarini_verir(istemci):
+    istemci.post("/api/olay", json=OLAY)
+    istemci.post("/api/mesaj", json={"tur": "SOS", "yuk": "Yardim"})
+    istemci.post("/portal/cagri", data={"durum": "enkaz"})
+    paketler = istemci.get("/api/gecmis").json()
+    tipler = [p["tip"] for p in paketler]
+    assert tipler[-1] == "portal" and "olay" in tipler and "mesaj" in tipler
+    assert all("alindi" in p for p in paketler if p["tip"] == "mesaj")
+    assert "cihaz" not in paketler[-1]["veri"]

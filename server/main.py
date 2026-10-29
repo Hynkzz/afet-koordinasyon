@@ -26,6 +26,7 @@ KOK = Path(__file__).resolve().parent.parent
 BIRLESTIRME_SURESI = 3.0
 RAPOR_ARALIGI = 60
 RAPOR_PENCERESI_DK = 10
+SON_YAYIN_SAYISI = 300
 KAYNAKLAR = {"mock": MockKaynak}
 
 log = logging.getLogger("afet")
@@ -47,6 +48,8 @@ class Yayinci:
         # Durum raporu icin: yayinlanan her sey son 10 dakikalik pencerede tutulur.
         self.gecmis: deque[tuple[float, str, dict]] = deque()
         self.son_sinyal: dict[str, dict] = {}
+        # Panel yeniden yuklenince listeler bos kalmasin; yalnizca bellekte, en son 300 yayin.
+        self.son_yayinlar: deque[dict] = deque(maxlen=SON_YAYIN_SAYISI)
 
     def kaydet(self, tip: str, veri: dict):
         simdi = time.time()
@@ -54,6 +57,8 @@ class Yayinci:
             self.son_sinyal[veri["dugum_id"]] = veri
         elif tip in ("olay", "mesaj", "portal"):
             self.gecmis.append((simdi, tip, veri))
+            if tip != "portal":
+                self.son_yayinlar.append({"tip": tip, "veri": veri, "alindi": datetime.now().astimezone().isoformat()})
         while self.gecmis and simdi - self.gecmis[0][0] > RAPOR_PENCERESI_DK * 60:
             self.gecmis.popleft()
 
@@ -274,6 +279,14 @@ async def durum_degistir(id: str, istek: DurumIstek) -> dict:
     log.info("Vaka %s: %s", id, istek.durum)
     await yayinci.yayinla("vaka", konumlu(vaka))
     return vaka
+
+
+@app.get("/api/gecmis")
+async def gecmis() -> list[dict]:
+    """Panel acilisinda yeniden oynatilacak paketler, eskiden yeniye."""
+    portal_kayitlari = sorted(portal.kayitlar.values(), key=lambda k: k["guncellendi"] or k["zaman"])
+    return [*yayinci.son_yayinlar,
+            *({"tip": "portal", "veri": {a: d for a, d in k.items() if a != "cihaz"}} for k in portal_kayitlari[-SON_YAYIN_SAYISI:])]
 
 
 @app.get("/api/dugumler")

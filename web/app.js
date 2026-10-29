@@ -54,7 +54,7 @@ function olaySatiri(id, doldur, sos) {
   olaySayisi.textContent = olaylar.rows.length;
 }
 
-function olayAl(olay) {
+function olayAl(olay, canli = true) {
   const ad = olay.etiket === "insan" ? "İnsan" : "Vuruş";
   olaySatiri(olay.olay_id, (s) => {
     hucre(s, saatYaz(olay.zaman));
@@ -63,7 +63,7 @@ function olayAl(olay) {
     hucre(s, olay.guven.toFixed(2), "sag");
     hucre(s, olay.adet, "sag");
   });
-  if (olay.kutu) kutular.set(olay.olay_id, { ...olay, alindi: performance.now() });
+  if (olay.kutu && canli) kutular.set(olay.olay_id, { ...olay, alindi: performance.now() });
 }
 
 // --- Canli izleme ---
@@ -196,13 +196,13 @@ function haritaOzet(siginak) {
     (haritaOzet.siginak ?? 0) + " sığınak, " + mesajNoktasi + " konumlu mesaj";
 }
 
-function haritayaMesaj(m) {
+function haritayaMesaj(m, zaman) {
   const sos = m.tur === "SOS";
   L.circleMarker([m.gps.lat, m.gps.lon], {
     radius: sos ? 8 : 6, color: sos ? renk.kritik : renk["yazi-2"], weight: 2,
     fillColor: sos ? renk.kritik : renk.panel, fillOpacity: sos ? 0.9 : 0.8,
   })
-    .bindPopup(popup([[sos ? "SOS" : "Mesaj"], [null, m.yuk], [null, m.kaynak + ", " + new Date().toLocaleTimeString("tr-TR", { hour12: false })]]))
+    .bindPopup(popup([[sos ? "SOS" : "Mesaj"], [null, m.yuk], [null, m.kaynak + ", " + saatYaz(zaman)]]))
     .addTo(katman.mesaj);
   mesajNoktasi++;
   haritaOzet();
@@ -223,10 +223,10 @@ function iletimEtiketi(iletim) {
   return s;
 }
 
-function mesajAl(m) {
+function mesajAl(m, alindi) {
   const sos = m.tur === "SOS";
-  // Mesajda alinma zamani yok; panelin gordugu an yaziliyor.
-  const zaman = new Date();
+  // Mesajda alinma zamani yok; sunucunun yayinladigi an, o da yoksa panelin gordugu an.
+  const zaman = alindi ? new Date(alindi) : new Date();
   const s = mesajlar.insertRow(0);
   if (sos) s.className = "sos";
   hucre(s, saatYaz(zaman));
@@ -245,7 +245,7 @@ function mesajAl(m) {
       r.lastChild.colSpan = 2;
     }, true);
   }
-  if (m.gps) haritayaMesaj(m);
+  if (m.gps) haritayaMesaj(m, zaman);
 }
 
 const gonderim = document.getElementById("gonderim");
@@ -553,6 +553,16 @@ setInterval(() => sinyaller.size && grafikleriGuncelle(), 1000);
 const durum = document.getElementById("durum");
 let bekleme = 1000;
 
+function paketAl({ tip, veri, alindi }) {
+  if (tip === "olay") olayAl(veri, !alindi);
+  else if (tip === "mesaj") mesajAl(veri, alindi);
+  else if (tip === "sinyal") sinyaller.set(veri.dugum_id, veri);
+  else if (tip === "portal") portalAl(veri);
+  else if (tip === "rapor") raporAl(veri);
+  else if (tip === "vaka") vakaAl(veri);
+  else if (tip === "kanallar") kanallarCiz(veri.kanallar);
+}
+
 function baglan() {
   const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
   ws.onopen = () => {
@@ -562,16 +572,7 @@ function baglan() {
     durum.className = "durum bagli";
     durum.textContent = "Bağlı";
   };
-  ws.onmessage = (e) => {
-    const { tip, veri } = JSON.parse(e.data);
-    if (tip === "olay") olayAl(veri);
-    else if (tip === "mesaj") mesajAl(veri);
-    else if (tip === "sinyal") sinyaller.set(veri.dugum_id, veri);
-    else if (tip === "portal") portalAl(veri);
-    else if (tip === "rapor") raporAl(veri);
-    else if (tip === "vaka") vakaAl(veri);
-    else if (tip === "kanallar") kanallarCiz(veri.kanallar);
-  };
+  ws.onmessage = (e) => paketAl(JSON.parse(e.data));
   ws.onclose = () => {
     durum.className = "durum kopuk";
     durum.textContent = "Bağlantı yok, " + Math.round(bekleme / 1000) + " sn sonra yeniden denenecek";
@@ -580,4 +581,8 @@ function baglan() {
     bekleme = Math.min(bekleme * 2, 10000);
   };
 }
-baglan();
+// Sayfa yenilenince listeler bos kalmasin: once son yayinlar oynatilir, sonra canli akisa baglanilir.
+fetch("/api/gecmis")
+  .then((c) => c.json())
+  .then((paketler) => paketler.forEach(paketAl))
+  .finally(baglan);
