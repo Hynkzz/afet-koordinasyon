@@ -254,16 +254,28 @@ function asilsizDugmesi(k) {
   return d;
 }
 
+function triyajEtiketi(k) {
+  const span = document.createElement("span");
+  const t = k.triyaj;
+  span.append(etiket("Ö" + t.oncelik, "o" + t.oncelik), " ");
+  const y = document.createElement("span");
+  y.className = "yontem";
+  y.textContent = t.yontem === "llm" ? "LLM" : "kural";
+  y.title = "Sınıflandırma yöntemi";
+  span.append(y);
+  return span;
+}
+
 function portalAl(k) {
   const sos = k.tur === "SOS" && !k.asilsiz;
-  const ozet = portalOzet(k);
+  const ozet = portalOzet(k) + (k.triyaj.ozet && k.triyaj.yontem === "llm" ? " · Özet: " + k.triyaj.ozet : "");
   const zaman = k.guncellendi || k.zaman;
   const tur = k.asilsiz ? etiket("Asılsız", "asilsiz") : etiket(k.tur === "SOS" ? "SOS" : "Güvende", sos ? "sos" : "mesaj");
 
   olaySatiri("portal-" + k.kod, (r) => {
     if (k.asilsiz) r.classList.add("asilsiz");
     hucre(r, saatYaz(zaman));
-    hucre(r, tur.cloneNode(true));
+    hucre(r, tur.cloneNode(true)).append(" ", triyajEtiketi(k));
     hucre(r, "Portal " + k.kod);
     hucre(r, ozet, "metin");
     r.lastChild.colSpan = 2;
@@ -277,6 +289,7 @@ function portalAl(k) {
   hucre(s, saatYaz(zaman));
   hucre(s, "Portal " + k.kod);
   const turHucresi = hucre(s, tur);
+  turHucresi.append(" ", triyajEtiketi(k));
   if (k.onceden_asilsiz && !k.asilsiz) turHucresi.append(" ", etiket("Önceden asılsız", "asilsiz"));
   const metin = hucre(s, ozet + " ", "metin");
   metin.append(asilsizDugmesi(k));
@@ -307,6 +320,14 @@ document.getElementById("qr-ac").addEventListener("click", async () => {
   document.getElementById("qr-adres").textContent = adres;
   qrKutu.showModal();
 });
+
+// --- Durum raporu ---
+function raporAl(r) {
+  document.getElementById("rapor-metin").textContent = r.metin;
+  document.getElementById("rapor-bilgi").textContent =
+    saatYaz(r.zaman) + " · " + (r.yontem === "llm" ? "LLM" : "kural tabanlı");
+}
+fetch("/api/rapor").then((c) => c.json()).then((r) => r && raporAl(r));
 
 // --- Sinyal ---
 // Renk durumu anlatir: esigin altindaki dugum turuncu/kirmizi, digerleri gri.
@@ -376,6 +397,7 @@ function baglan() {
     else if (tip === "mesaj") mesajAl(veri);
     else if (tip === "sinyal") sinyaller.set(veri.dugum_id, veri);
     else if (tip === "portal") portalAl(veri);
+    else if (tip === "rapor") raporAl(veri);
   };
   ws.onclose = () => {
     durum.className = "durum kopuk";

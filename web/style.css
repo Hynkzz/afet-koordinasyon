@@ -146,3 +146,13 @@ dialog::backdrop { background: rgb(0 0 0 / 0.6); }
 dialog p, dialog form { margin: 8px 16px; }
 #qr { display: inline-block; background: #fff; margin: 12px 16px 0; line-height: 0; }
 #qr-adres { font-family: ui-monospace, monospace; }
+
+.rapor { padding: 8px 10px; border-bottom: 1px solid var(--cizgi); }
+.rapor-ust { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--yazi-2); display: flex; justify-content: space-between; }
+.rapor-ust .ek { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--yazi-3); }
+#rapor-metin { margin-top: 4px; min-height: 1.4em; }
+
+.etiket.o1 { color: #fff; background: var(--kritik); border-color: var(--kritik); }
+.etiket.o2 { color: var(--uyari); }
+.etiket.o3 { color: var(--yazi-2); }
+.yontem { color: var(--yazi-3); font-size: 11px; }
