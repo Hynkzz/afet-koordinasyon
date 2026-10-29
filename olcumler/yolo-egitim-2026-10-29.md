@@ -71,3 +71,27 @@ uygun değil.
 Ukrayna videosunun renk uzayı bilgisi bozuk ("reserved") olduğu için kareler önce
 çözülemiyor ve üç model de %0 veriyordu; bilgi kayıpsız düzeltildi
 (`scripts/video_indir.py`, `renk_duzelt`), sayılar düzeltilmiş videodan.
+
+## Güvenlik kamerası açısı: MOT20 ölçümü
+
+Kamera gerçekte yüksekte (3–6 m, aşağı eğik) duracağı için modeller bu açıdan da ölçüldü.
+Veri: MOT20 [Dendorfer ve ark., 2020, arXiv:2003.09003], CC BY-NC-SA 3.0; 4 eğitim dizisi
+(etiketleri açık olan), her 10 karede bir → 895 kare, 91.434 insan kutusu (yaya, araçtaki
+ve duran kişi; görünürlük ≥ 0,25). Çok kalabalık sahneler: kare başına ortalama ~100 kişi.
+Dönüşüm: `egitim/mot_hazirla.py`. Ölçüm laptopta (RTX 3050), `yolo detect val`, `max_det=500`.
+
+| Model | mAP@0,5 (640 px) | mAP@0,5:0,95 (640 px) | mAP@0,5 (1280 px) | mAP@0,5:0,95 (1280 px) |
+|---|---|---|---|---|
+| Hazır YOLO11n | 0,516 | 0,203 | 0,639 | 0,256 |
+| Yalnız C2A | 0,666 | 0,242 | 0,488 | 0,169 |
+| Karışık | 0,630 | 0,225 | 0,594 | 0,237 |
+
+Kare başına süre (ön işleme + çıkarım + son işleme): 640 px ~5 ms, 1280 px ~18–22 ms.
+
+- Güvenlik kamerası açısında en iyi iki seçenek birbirine yakın: yalnız C2A modeli 640 px'te
+  (0,666) ve hazır model 1280 px'te (0,639). Hiçbiri 0,67'yi geçmiyor.
+- Giriş büyüyünce insanlar büyük görünür: küçük insana alışmış C2A modeli 1280 px'te kötüleşiyor,
+  hazır model iyileşiyor.
+- 1280 px, LLM sunucusu GPU'da açıkken (3,1 GB) toplu işlemde belleğe sığmadı; tek görüntü
+  işlemle çalıştı. Canlı kamera zaten tek kare işlediği için demoda sorun değil.
+- MOT20 sahneleri afet değil (yaya kalabalığı); açı benzer, ortam farklı.
