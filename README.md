@@ -148,6 +148,20 @@ ağına bağlayın, paneldeki QR kodu okutun. Telefonun portal penceresini
 kendiliğinden açması için erişim noktası betiği:
 [`scripts/hotspot/`](scripts/hotspot/README.md).
 
+## Harita katmanları ve dışa aktarım
+
+Haritanın sağ üstündeki katman düğmesiyle açılıp kapanır: sığınaklar, mesajlar
+ve SOS, açık vakaların ısı haritası (öncelik 1 en ağır), düğümler (renk son
+RSSI'ya göre), kapsama alanları (düğüm menzili), kamera ve mikrofon.
+Düğüm ve sensör konumları `data/dugumler.geojson` dosyasından gelir
+(biçim: `shared/dugum.schema.json`); şu anki konumlar ve 80 m menzil tahmin.
+Kamera ve mikrofon olayları sensörün konumunda, GPS'siz SOS onu gönderen
+düğümün konumunda gösterilir.
+
+**Dışa aktar** düğmesi (`GET /api/disa-aktar`) tüm vakaları durumlarıyla
+birlikte GeoJSON olarak indirir; QGIS'te açılabilir. Ad ve cihaz kimliği
+dosyaya yazılmaz.
+
 ## Kanal simülasyonu
 
 Her giden mesaj (paneldeki SOS ve hazır mesajlar, portal kayıtları) msgpack
