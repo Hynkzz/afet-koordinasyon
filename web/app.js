@@ -70,6 +70,28 @@ function olayAl(olay, canli = true) {
 const kamera = document.getElementById("kamera");
 const ciz = kamera.getContext("2d");
 const kutular = new Map();
+const kameraAdi = document.getElementById("kamera-adi");
+// Kamera programi --kare ile kare gonderiyorsa goruntu ve tum kutular ondan cizilir.
+let sonKare = null;
+const KARE_OMRU_MS = 2000;
+
+function kareAl(k) {
+  const resim = new Image();
+  resim.onload = () => (sonKare = { resim, kutular: k.kutular, alindi: performance.now() });
+  resim.src = "data:image/jpeg;base64," + k.jpeg;
+  kameraAdi.textContent = "Kamera 1 · " + k.kaynak + " (benzetim)";
+}
+
+function kutuCiz(k, ox, oy, gw, gh) {
+  ciz.strokeStyle = renk.uyari;
+  ciz.lineWidth = 2;
+  ciz.strokeRect(ox + k.x * gw, oy + k.y * gh, k.w * gw, k.h * gh);
+  const yazi = "insan " + k.guven.toFixed(2);
+  ciz.fillStyle = renk.uyari;
+  ciz.fillRect(ox + k.x * gw - 1, oy + k.y * gh - 17, ciz.measureText(yazi).width + 8, 16);
+  ciz.fillStyle = "#121417";
+  ciz.fillText(yazi, ox + k.x * gw + 3, oy + k.y * gh - 5);
+}
 
 function kameraCiz() {
   const olcek = window.devicePixelRatio || 1;
@@ -82,29 +104,29 @@ function kameraCiz() {
   ciz.fillStyle = "#0d0f11";
   ciz.fillRect(0, 0, w, h);
 
-  ciz.strokeStyle = renk.cizgi;
-  ciz.lineWidth = 1;
-  for (let i = 1; i < 4; i++) {
-    ciz.beginPath(); ciz.moveTo((w * i) / 4, 0); ciz.lineTo((w * i) / 4, h); ciz.stroke();
-    ciz.beginPath(); ciz.moveTo(0, (h * i) / 4); ciz.lineTo(w, (h * i) / 4); ciz.stroke();
-  }
   ciz.font = "12px system-ui, sans-serif";
-  ciz.fillStyle = renk["yazi-3"];
-  ciz.fillText("Görüntü yok (yer tutucu)", 10, h - 10);
-  ciz.fillText(new Date().toLocaleTimeString("tr-TR", { hour12: false }), w - 70, 18);
-
   const simdi = performance.now();
-  for (const [id, o] of kutular) {
-    if (simdi - o.alindi > KUTU_OMRU_MS) { kutular.delete(id); continue; }
-    const k = o.kutu;
-    ciz.strokeStyle = renk.uyari;
-    ciz.lineWidth = 2;
-    ciz.strokeRect(k.x * w, k.y * h, k.w * w, k.h * h);
-    const yazi = "insan " + o.guven.toFixed(2);
-    ciz.fillStyle = renk.uyari;
-    ciz.fillRect(k.x * w - 1, k.y * h - 17, ciz.measureText(yazi).width + 8, 16);
-    ciz.fillStyle = "#121417";
-    ciz.fillText(yazi, k.x * w + 3, k.y * h - 5);
+  if (sonKare && simdi - sonKare.alindi < KARE_OMRU_MS) {
+    // Goruntu oranini bozmadan panele sigdir.
+    const r = sonKare.resim, olcekR = Math.min(w / r.width, h / r.height);
+    const gw = r.width * olcekR, gh = r.height * olcekR, ox = (w - gw) / 2, oy = (h - gh) / 2;
+    ciz.drawImage(r, ox, oy, gw, gh);
+    sonKare.kutular.forEach((k) => kutuCiz(k, ox, oy, gw, gh));
+  } else {
+    ciz.strokeStyle = renk.cizgi;
+    ciz.lineWidth = 1;
+    for (let i = 1; i < 4; i++) {
+      ciz.beginPath(); ciz.moveTo((w * i) / 4, 0); ciz.lineTo((w * i) / 4, h); ciz.stroke();
+      ciz.beginPath(); ciz.moveTo(0, (h * i) / 4); ciz.lineTo(w, (h * i) / 4); ciz.stroke();
+    }
+    ciz.fillStyle = renk["yazi-3"];
+    ciz.fillText("Görüntü yok (yer tutucu)", 10, h - 10);
+    ciz.fillText(new Date().toLocaleTimeString("tr-TR", { hour12: false }), w - 70, 18);
+    kameraAdi.textContent = "Kamera 1";
+    for (const [id, o] of kutular) {
+      if (simdi - o.alindi > KUTU_OMRU_MS) { kutular.delete(id); continue; }
+      kutuCiz({ ...o.kutu, guven: o.guven }, 0, 0, w, h);
+    }
   }
   requestAnimationFrame(kameraCiz);
 }
@@ -633,6 +655,7 @@ function paketAl({ tip, veri, alindi }) {
   else if (tip === "vaka") vakaAl(veri);
   else if (tip === "kanallar") kanallarCiz(veri.kanallar);
   else if (tip === "senaryo") senaryoAl(veri);
+  else if (tip === "kare") kareAl(veri);
   // Kuyruk temizlendi: listeleri bastan kurmanin en kisa yolu sayfayi yenilemek.
   else if (tip === "sifirla") location.reload();
 }
