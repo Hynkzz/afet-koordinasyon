@@ -77,9 +77,9 @@ Testler:
 - Mesajlar ChaCha20-Poly1305 ile şifrelidir. Başlık (`id`, `tur`, `kaynak`,
   `hedef`, `sayac`) açık ama doğrulanır; metin ve konum şifrelidir. Her
   kaynak için son sayaç tutulur, aynı veya küçük sayaçlı paket reddedilir.
-- Panel kütüphaneleri (Leaflet, Chart.js) `web/vendor/` altında, CDN yok.
-  Harita karoları şimdilik çevrimiçi OSM'den geliyor; çevrimdışı karolar
-  sonraki adımda.
+- Panel kütüphaneleri (Leaflet, protomaps-leaflet, Chart.js) `web/vendor/`
+  altında, CDN yok. Harita `data/tiles/yozgat.pmtiles` dosyasından çizilir
+  (Yozgat merkez, yaklaşık 15×13 km, zoom 0–15, 1,2 MB).
 
 ```
 afet-projesi/
@@ -94,6 +94,36 @@ afet-projesi/
   scripts/         ölçüm betikleri
   tests/
 ```
+
+## Çevrimdışı çalışma
+
+Çalışırken hiçbir dış adrese istek gitmez. İnternet yalnızca harita
+dosyasını hazırlarken bir kez gerekir.
+
+### Harita bölgesini değiştirmek
+
+[pmtiles aracını](https://github.com/protomaps/go-pmtiles/releases) indirin,
+sonra bölgenin sınırını (batı, güney, doğu, kuzey) ve zoom aralığını verin:
+
+```bash
+python scripts/karo_indir.py --bbox 34.72,39.75,34.90,39.87 --maxzoom 15 \
+    --cikti data/tiles/yozgat.pmtiles --pmtiles ./pmtiles
+```
+
+Betik Protomaps'in günlük OSM tabanlı haritasından yalnızca bu dikdörtgeni
+keser; OSM'nin karo sunucusuna istek atmaz. Başka bir bölge için
+`web/app.js` içindeki `BOLGE` sınırını ve dosya adını da güncelleyin.
+
+### İnternetsiz test
+
+1. Sunucuyu açın: `.venv/bin/python -m server.main --kaynak mock`
+2. İnterneti kapatın: Wi-Fi'ı kapatıp kabloyu çekin ya da Linux'ta
+   `nmcli networking off` (geri açmak için `nmcli networking on`).
+3. Tarayıcıda `http://localhost:8000` açın, sayfayı `Ctrl+Shift+R` ile
+   önbelleksiz yenileyin.
+4. Kontrol: harita koyu stille çizilir, paneller güncellenir, SOS çalışır.
+   Geliştirici araçlarının (F12) Ağ sekmesinde `localhost` dışında istek
+   olmamalı.
 
 ## Diğer bölümler nasıl bağlanır
 
