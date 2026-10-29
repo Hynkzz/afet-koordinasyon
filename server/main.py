@@ -11,6 +11,7 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
+from server import portal as portal_modulu
 from server.crypto import GecersizPaket, Sifreleyici, psk_oku
 from server.models import Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
 from server.sources.mock import MockKaynak
@@ -159,6 +160,8 @@ async def mesaj_gonder(istek: MesajIstek) -> Mesaj:
     return mesaj
 
 
+portal = portal_modulu.Portal(yayinci.yayinla)
+portal_modulu.kur(app, portal)
 app.mount("/karolar", StaticFiles(directory=KOK / "data" / "tiles", check_dir=False), name="karolar")
 # API yollarindan sonra baglanmali; "/" her yolu yakalar.
 app.mount("/", StaticFiles(directory=KOK / "web", html=True, check_dir=False), name="web")
