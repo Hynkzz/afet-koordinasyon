@@ -77,7 +77,7 @@ Testler:
 - Mesajlar ChaCha20-Poly1305 ile şifrelidir. Başlık (`id`, `tur`, `kaynak`,
   `hedef`, `sayac`) açık ama doğrulanır; metin ve konum şifrelidir. Her
   kaynak için son sayaç tutulur, aynı veya küçük sayaçlı paket reddedilir.
-- Panel kütüphaneleri (Leaflet, protomaps-leaflet, Chart.js) `web/vendor/`
+- Panel kütüphaneleri (Leaflet, protomaps-leaflet, Chart.js, qrcode-generator) `web/vendor/`
   altında, CDN yok. Harita `data/tiles/yozgat.pmtiles` dosyasından çizilir
   (Yozgat merkez, yaklaşık 15×13 km, zoom 0–15, 1,2 MB).
 
@@ -88,12 +88,44 @@ afet-projesi/
     main.py        FastAPI, WebSocket, olay birleştirme
     models.py      pydantic modelleri (shared/ ile birebir)
     crypto.py      şifreleme ve tekrar koruması
+    portal.py      afetzede portalı ve kötüye kullanım önlemleri
     sources/       veri kaynakları: base.py arayüz, mock.py sahte veri
   web/             panel (HTML, CSS, JS, vendor/)
   data/            örnek sığınaklar
-  scripts/         ölçüm betikleri
+  scripts/         ölçüm, karo indirme, hotspot/ erişim noktası
   tests/
 ```
+
+## Afetzede portalı
+
+Telefonla açılan, JS gerektirmeyen yardım isteme sayfası: `http://<bilgisayar IP>:8000/portal`.
+
+- **Adım 1:** Durum seçilir (Enkaz altındayım, Yaralı var, Güvendeyim, Başka
+  bir durum). Seçildiği an kayıt açılır, panele düşer ve takip kodu verilir.
+- **Adım 2 (isteğe bağlı):** Kişi sayısı, yaralı var mı, adres veya tarif,
+  serbest mesaj, ad.
+- **Takip:** `/portal/takip` sayfasında kodla durum görülür (yeni / ekip
+  yönlendirildi / kurtarıldı); sayfa 30 saniyede bir yenilenir.
+- Tarayıcı konumu düz HTTP'de alınamadığı için konum olarak erişim noktasının
+  konumu kullanılır (`.env` içinde `AFET_AP_KONUM=enlem,boylam`).
+- Panelde **Portal QR** düğmesi portal adresinin QR kodunu gösterir. Adres
+  kendiliğinden bulunur; elle vermek için `AFET_PORTAL_ADRES`.
+
+Kötüye kullanım önlemleri:
+
+| Önlem | Davranış |
+|---|---|
+| Aynı cihazdan tekrar | 10 dakika içindeki yeni çağrı yeni kayıt açmaz, öncekini günceller (son durum geçerli, adet artar) |
+| Operatör "Asılsız" işareti | Kayıt silinmez, üstü çizili görünür; o cihazın 1 saat içindeki yeni kayıtlarına "Önceden asılsız" etiketi eklenir; geri alınabilir |
+| Uyarı metni | Adım 1'de tek satır |
+
+Cihaz, erişim noktası bu makinedeyse MAC adresinden, değilse IP'den tanınır;
+her ikisi de tuzlu karma olarak tutulur.
+
+Telefonla denemek: sunucuyu `--host 0.0.0.0` ile açın, telefonu aynı Wi-Fi
+ağına bağlayın, paneldeki QR kodu okutun. Telefonun portal penceresini
+kendiliğinden açması için erişim noktası betiği:
+[`scripts/hotspot/`](scripts/hotspot/README.md).
 
 ## Çevrimdışı çalışma
 
