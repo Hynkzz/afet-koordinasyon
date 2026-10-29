@@ -5,6 +5,8 @@ oynatilir ve --kare ile kareler panelin canli izleme ekranina da gider.
 ultralytics ve torch gerektirir; ana sunucunun bagimliliklarina eklenmedi (kurulum: README, "Kamera").
   python -m kamera --model yolo11n.pt --kaynak video.webm --sunucu http://127.0.0.1:8000 --kare --dongu
   python -m kamera --model yolo11n.pt --kaynak 0 --sunucu http://127.0.0.1:8000
+  python -m kamera --model yolo11n.pt --kaynak http://192.168.1.20:8080/video --sunucu ... --kare   # telefon (IP Webcam)
+  python -m kamera --model yolo11n.pt --kaynak rtsp://kullanici:parola@192.168.1.30/stream1 ...   # IP kamera
   python -m kamera --model yolo11n.pt --kaynak video.webm --olc 300      # yalnizca FPS olcumu
 """
 import argparse
@@ -57,13 +59,16 @@ def main():
     secim = ayrac.parse_args()
 
     model = YOLO(secim.model)
-    dosya = not secim.kaynak.isdigit()
-    cap = cv2.VideoCapture(secim.kaynak if dosya else int(secim.kaynak))
+    # Canli kaynak: kamera numarasi ya da ag adresi (IP kamera RTSP, telefon uygulamasi HTTP akisi).
+    canli = secim.kaynak.isdigit() or "://" in secim.kaynak
+    dosya = not canli
+    cap = cv2.VideoCapture(int(secim.kaynak) if secim.kaynak.isdigit() else secim.kaynak)
     if not cap.isOpened():
         raise SystemExit(f"kaynak acilamadi: {secim.kaynak}")
     # Video dosyasi kamera gibi davransin: kendi hizinda oynatilir, model hizinda degil.
     kare_suresi = 1 / (cap.get(cv2.CAP_PROP_FPS) or 25) if dosya and not secim.olc else 0
-    ad = Path(secim.kaynak).name if dosya else f"kamera {secim.kaynak}"
+    # Adreste parola olabilir (rtsp://kullanici:parola@...); panele yalnizca sunucu adi gider.
+    ad = Path(secim.kaynak).name if dosya else (secim.kaynak.split("@")[-1].split("/")[0] if canli and "://" in secim.kaynak else f"kamera {secim.kaynak}")
 
     sureler, son_olay, son_kare, kare_no = [], 0.0, 0.0, 0
     sonraki = time.monotonic()
