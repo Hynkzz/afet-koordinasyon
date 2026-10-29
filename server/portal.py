@@ -79,8 +79,10 @@ async def form_oku(istek: Request) -> dict[str, str]:
 
 
 class Portal:
-    def __init__(self, yayinla: Callable[[str, dict], Awaitable[None]], saat=time.time):
+    def __init__(self, yayinla: Callable[[str, dict], Awaitable[None]],
+                 ilet: Callable[[str, str, dict | None], Awaitable[dict]], saat=time.time):
         self.yayinla = yayinla
+        self.ilet = ilet
         self.saat = saat
         self.kayitlar: dict[str, dict] = {}
         self.son_cagri: dict[str, tuple[float, str]] = {}
@@ -138,6 +140,7 @@ class Portal:
             yeni = True
         # Ilk dokunusta serbest metin yok; secilen durumdan kural tabanli oncelik verilir.
         kayit["triyaj"] = llm.kural_triyaj(DURUMLAR[durum][0], sos=kayit["tur"] == "SOS").model_dump() | {"yontem": "kural"}
+        kayit["iletim"] = await self.ilet(kayit["tur"], iletim_metni(kayit), kayit["gps"])
         self.son_cagri[cihaz] = (simdi, kayit["kod"])
         log.info("Portal cagrisi %s: %s (%s)", kayit["kod"], durum, "yeni" if yeni else "guncelleme")
         await self.yayinla_kayit(kayit)
@@ -163,6 +166,8 @@ class Portal:
         metin = f"{DURUMLAR[kayit['durum']][0]}. {kayit['mesaj']}".strip()
         sonuc, yontem = await llm.triyaj(metin, kayit["kisi"], kayit["yarali"], sos=kayit["tur"] == "SOS")
         kayit["triyaj"] = sonuc.model_dump() | {"yontem": yontem}
+        # Ayrinti ve triyaj eklenmis hali yeniden gonderilir.
+        kayit["iletim"] = await self.ilet(kayit["tur"], iletim_metni(kayit), kayit["gps"])
         log.info("Portal kaydi %s triyaj: oncelik %d (%s)", kod, sonuc.oncelik, yontem)
         await self.yayinla_kayit(kayit)
 
@@ -176,6 +181,21 @@ class Portal:
         self.vakalar.gecmise_yaz(kod, "asilsiz" if isaretle else "asilsiz_kaldirildi")
         log.info("Portal kaydi %s asilsiz isareti: %s", kod, "kondu" if isaretle else "kaldirildi")
         await self.yayinla_kayit(kayit)
+
+
+def iletim_metni(kayit: dict) -> str:
+    # LoRa ~200 bayt tasir; once en onemli bilgiler, serbest metin en sonda ve kirpilarak.
+    t = kayit["triyaj"]
+    parcalar = [kayit["kod"], DURUMLAR[kayit["durum"]][0], f"O{t['oncelik']}"]
+    if kayit["kisi"]:
+        parcalar.append(f"{kayit['kisi']} kisi")
+    if kayit["yarali"]:
+        parcalar.append("yarali")
+    ozet = t["ozet"] if t["yontem"] == "llm" else kayit["mesaj"]
+    for ek in (kayit["tarif"], ozet):
+        if ek:
+            parcalar.append(ek)
+    return "; ".join(parcalar)[:200]
 
 
 def baslangic_sayfasi() -> HTMLResponse:

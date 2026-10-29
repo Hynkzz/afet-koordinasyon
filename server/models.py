@@ -109,3 +109,7 @@ class MesajIstek(Sema):
 
 class DurumIstek(Sema):
     durum: Literal["yeni", "ekip_yonlendirildi", "kurtarildi"]
+
+
+class KanalIstek(Sema):
+    acik: bool

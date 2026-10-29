@@ -17,7 +17,8 @@ from server import llm
 from server import portal as portal_modulu
 from server.crypto import GecersizPaket, Sifreleyici, psk_oku
 from server.db import Vakalar
-from server.models import DurumIstek, Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
+from server.kanal import KANALLAR, Kanallar
+from server.models import DurumIstek, KanalIstek, Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
 from server.sources.mock import MockKaynak
 
 KOK = Path(__file__).resolve().parent.parent
@@ -118,6 +119,8 @@ yayinci = Yayinci()
 birlestirici = OlayBirlestirici()
 # Sayac saatten baslar; sunucu yeniden acilinca alicilar eski sayaci gorup paketi tekrar sanmasin.
 merkez_sayac = itertools.count(time.time_ns() // 1_000_000)
+portal_sayac = itertools.count(time.time_ns() // 1_000_000)
+kanallar = Kanallar()
 
 
 @asynccontextmanager
@@ -244,17 +247,51 @@ async def olay_al(olay: Olay) -> dict:
 
 
 @app.post("/api/mesaj")
-async def mesaj_gonder(istek: MesajIstek) -> Mesaj:
+async def mesaj_gonder(istek: MesajIstek) -> dict:
     sayac = next(merkez_sayac)
     taslak = Taslak(id=f"merkez-{sayac}", kaynak="merkez", hedef="*", ttl=5, sayac=sayac, **istek.model_dump())
     paket = app.state.sifreleyici.sifrele(taslak)
-    log.info("Mesaj gonderildi: %s %s, %d bayt", paket.id, paket.tur, len(paket.model_dump_json()))
-    mesaj = Mesaj(**taslak.model_dump(), imza=paket.imza)
-    await yayinci.yayinla("mesaj", mesaj.model_dump(mode="json", exclude_none=True))
-    return mesaj
+    iletim = kanallar.gonder(paket)
+    veri = Mesaj(**taslak.model_dump(), imza=paket.imza).model_dump(mode="json", exclude_none=True) | {"iletim": iletim}
+    await yayinci.yayinla("mesaj", veri)
+    return veri
 
 
-portal = portal_modulu.Portal(yayinci.yayinla)
+async def portal_ilet(tur: str, yuk: str, gps: dict | None) -> dict:
+    # Portal kaydi merkeze/AFAD'a mesh uzerinden gider; telefon disariya dogrudan ulasamaz.
+    def gonder(metin: str) -> dict:
+        sayac = next(portal_sayac)
+        taslak = Taslak(id=f"portal-{sayac}", tur=tur, kaynak="portal", hedef="*", ttl=5, yuk=metin, gps=gps, sayac=sayac)
+        return kanallar.gonder(app.state.sifreleyici.sifrele(taslak))
+
+    iletim = gonder(yuk)
+    en_genis = max((s for ad, s in KANALLAR.items() if kanallar.acik[ad]), default=0)
+    # Hicbir acik kanala sigmiyorsa metin sondan kirpilir; onemli bilgiler metnin basinda.
+    for _ in range(3):
+        if iletim["kanal"] or not en_genis or iletim["boyut"] <= en_genis:
+            break
+        fazla = iletim["boyut"] - en_genis
+        yuk = yuk.encode()[: max(len(yuk.encode()) - fazla, 0)].decode(errors="ignore")
+        iletim = gonder(yuk) | {"kirpildi": True}
+    return iletim
+
+
+@app.get("/api/kanallar")
+async def kanal_listesi() -> list[dict]:
+    return kanallar.durum()
+
+
+@app.post("/api/kanal/{ad}")
+async def kanal_ayarla(ad: str, istek: KanalIstek) -> list[dict]:
+    try:
+        kanallar.ayarla(ad, istek.acik)
+    except KeyError:
+        raise HTTPException(404, "kanal yok")
+    await yayinci.yayinla("kanallar", {"kanallar": kanallar.durum()})
+    return kanallar.durum()
+
+
+portal = portal_modulu.Portal(yayinci.yayinla, portal_ilet)
 portal_modulu.kur(app, portal)
 app.mount("/karolar", StaticFiles(directory=KOK / "data" / "tiles", check_dir=False), name="karolar")
 # API yollarindan sonra baglanmali; "/" her yolu yakalar.
