@@ -72,7 +72,7 @@ düğümler `hedef`/`ttl`'e bakıp yönlendirebilsin; metin ve konum şifrelidir
 | Alan | Açıklama |
 |---|---|
 | `id`, `tur`, `kaynak`, `hedef`, `ttl`, `sayac` | Mesajdakiyle aynı, açık |
-| `sifreli` | `{"yuk": "...", "gps": {...}}` JSON'unun ChaCha20 ile şifrelenmiş hali, base64 |
+| `sifreli` | `{"yuk": "...", "gps": {...}}` JSON'unun ChaCha20 ile şifrelenmiş hali, base64. JSON UTF-8 yazılır (`ensure_ascii=False`); Türkçe harf kaçış dizisi olunca 3 kat yer kaplar |
 | `imza` | Poly1305 etiketi, base64 |
 
 Şifreleme kuralları (sunucudaki `server/crypto.py` ile aynı olmalı):
@@ -94,7 +94,7 @@ def paketle(psk, id, tur, kaynak, hedef, ttl, sayac, yuk, gps=None):
     nonce = hashlib.sha256(kaynak.encode()).digest()[:4] + sayac.to_bytes(8, "big")
     aad = json.dumps([id, tur, kaynak, hedef, sayac], separators=(",", ":")).encode()
     acik = {"yuk": yuk, **({"gps": gps} if gps else {})}
-    cikti = ChaCha20Poly1305(psk).encrypt(nonce, json.dumps(acik).encode(), aad)
+    cikti = ChaCha20Poly1305(psk).encrypt(nonce, json.dumps(acik, ensure_ascii=False).encode(), aad)
     return {"id": id, "tur": tur, "kaynak": kaynak, "hedef": hedef, "ttl": ttl, "sayac": sayac,
             "sifreli": base64.b64encode(cikti[:-16]).decode(), "imza": base64.b64encode(cikti[-16:]).decode()}
 ```

@@ -51,7 +51,8 @@ class Sifreleyici:
         acik = taslak.model_dump(mode="json", include={"yuk", "gps"}, exclude_none=True)
         cikti = self._aead.encrypt(
             _nonce(taslak.kaynak, taslak.sayac),
-            json.dumps(acik, separators=(",", ":")).encode(),
+            # ensure_ascii=False: Turkce harf \u0131 gibi 6 bayt yerine UTF-8 ile 2 bayt tutar; LoRa icin onemli.
+            json.dumps(acik, separators=(",", ":"), ensure_ascii=False).encode(),
             _aad(taslak.id, taslak.tur, taslak.kaynak, taslak.hedef, taslak.sayac),
         )
         return Paket(
