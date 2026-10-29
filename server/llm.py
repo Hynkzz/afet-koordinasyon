@@ -82,7 +82,8 @@ def kural_triyaj(metin: str, kisi_alani: str | None = None, yarali_alani: bool |
 
     kisi = {"1": 1, "2-5": 2, "5+": 5}.get(kisi_alani or "")
     if kisi is None:
-        bulunan = re.search(r"\b(\d+|" + "|".join(SAYILAR) + r")\s*kisi", sade)
+        # En fazla 3 hane: telefon numarasinin arkasindaki "kisi" kelimesi sayi sanilmasin.
+        bulunan = re.search(r"\b(\d{1,3}|" + "|".join(SAYILAR) + r")\s*kisi", sade)
         if bulunan:
             sayi = bulunan.group(1)
             kisi = int(sayi) if sayi.isdigit() else SAYILAR[sayi]

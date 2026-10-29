@@ -126,3 +126,9 @@ def test_rapor_llm_ile(llm_var):
 def test_rapor_llm_hatasinda_kurala_duser(llm_var):
     llm_var(OSError("yok"))
     assert calistir(llm.durum_raporu(OZET))[1] == "kural"
+
+
+def test_telefon_numarasi_kisi_sayisi_sanilmaz():
+    # Gercek deprem mesajinda goruldu: numaranin hemen arkasinda "kisi" yaziyordu.
+    sonuc = llm.kural_triyaj("Ulasilamayan numara 05325182777 kisi enkaz altinda")
+    assert sonuc.kisi_sayisi is None
