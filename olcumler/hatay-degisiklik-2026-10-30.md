@@ -43,3 +43,35 @@ bulma oranı gerçek veriye taşınmıyor. Görüntülere bakınca nedenler:
 
 Direk kamerasında 2. madde daha hafiftir (sabit kamera, referans her gün güncellenebilir),
 ama gölge ve ışık yine sorun olur. Bu sonuç, 2. aşamada eğitimli sınıflandırıcıya geçmenin gerekçesidir.
+
+## 2. aşama: eğitimli sınıflandırıcı (egitim/hasar_siniflandirici.py)
+
+```
+CUDA_VISIBLE_DEVICES="" ~/afet-yolo/venv/bin/python -m egitim.hasar_siniflandirici --tohum 0   # 1, 2
+```
+
+- Girdi: blok başına 64×64 kesit, 7 kanal (öncesi RGB, sonrası RGB, blok maskesi).
+- Model: ImageNet ön eğitimli ResNet18, ilk katman 7 kanala uyarlandı; 30 tur, çevirme/döndürme.
+- Veri: 8 Maxar parçası (031133023322 bulutlu, alınmadı). Test parçası 031133023303
+  eğitime hiç girmedi. Eğitim 2.235 blok (173 pozitif), doğrulama 394 (21 pozitif),
+  test 890 (81 pozitif). Model ve eşik doğrulama kümesinde seçildi.
+- Laptop işlemcisinde (GPU belleği LLM'de), 3 eğitim paralel: tohum başına ~1.600 sn.
+
+| Tohum | Test AUC | Duyarlılık (doğrulama eşiği) | Kesinlik | Yanlış alarm |
+|---|---|---|---|---|
+| 0 | 0,792 | 23/81 (%28,4) | 23/49 (%46,9) | 26/809 (%3,2) |
+| 1 | 0,818 | 10/81 (%12,3) | 10/24 (%41,7) | 14/809 (%1,7) |
+| 2 | 0,807 | 16/81 (%19,8) | 16/28 (%57,1) | 12/809 (%1,5) |
+
+Test eğrisinden okunan işletme noktaları (betimleme; eşik testte ayarlanmadı demek değil, yalnız eğrinin şekli):
+
+| Yanlış alarm | Tohum 0 | Tohum 1 | Tohum 2 |
+|---|---|---|---|
+| %5 | 25/81 | 24/81 | 28/81 |
+| %10 | 34/81 | 36/81 | 39/81 |
+| %20 | 44/81 | 48/81 | 46/81 |
+
+Sonuç: Eğitimli sınıflandırıcı basit değişiklik tespitinden belirgin iyi (test AUC 0,79–0,82,
+basit yöntemde 0,59–0,67). Yine de yanlış alarm %10'dayken hasarlı blokların ancak %42–48'ini
+buluyor. Doğrulama kümesinde 21 pozitif olduğu için seçilen eşik tohuma göre çok oynuyor
+(duyarlılık %12–28). Daha çok etiketli veri (diğer şehirler, tek bina etiketleri) gerekir.

@@ -500,3 +500,4 @@ Bina hasar tespiti ölçümleri:
 |---|---|---|
 | Direk benzetimi, tespit | 74/81 (%91,4), yanlış alarm 0 | `olcumler/direk-benzetim-2026-10-30.md` |
 | Antakya gerçek veri, basit değişiklik tespiti | AUC 0,59–0,67 | `olcumler/hatay-degisiklik-2026-10-30.md` |
+| Antakya gerçek veri, eğitimli sınıflandırıcı (3 tohum) | test AUC 0,79–0,82; yanlış alarm %10 iken 34–39/81 | `olcumler/hatay-degisiklik-2026-10-30.md` |
