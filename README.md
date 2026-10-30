@@ -183,8 +183,15 @@ kurtarma videoları kullanılır (Wikimedia Commons; lisanslar
 
 Video kendi hızında oynatılır; `--kare` ile kareler (640 px, saniyede 5) panelin
 **Canlı İzleme** ekranına kutularıyla gider, `--dongu` bitince başa sarar.
-Yer seviyesinden çekilmiş bu videolarda hazır `yolo11n.pt` daha iyi sonuç verir;
-yüksekten bakan kamera için C2A + COCO karma model (`olcumler/` altında YOLO dosyaları).
+Hangi model hangi kamerada (mAP@0,5, `olcumler/yolo-egitim-2026-10-29.md`):
+
+| Kamera | Model | Neden |
+|---|---|---|
+| Yer seviyesi, el kamerası, haber görüntüsü | hazır `yolo11n.pt` | Bu videolarda gözle en iyi sonuç; eğitilen modeller yer seviyesinde hiçbir ölçümde açık fark vermedi |
+| Yüksek güvenlik kamerası, direk | `karisik2-yolo11n.pt` (C2A + COCO + MOT17) | MOT20'de 0,790 (640 px), hazır model 0,516 |
+| İnsansız hava aracı, kuş bakışı | `karisik2-yolo11n.pt` | C2A testinde 0,781, hazır model 0,160 |
+
+Modeller `~/afet-yolo/modeller/` altında; `--model` ile seçilir.
 
 ## Vuruş tespiti
 
