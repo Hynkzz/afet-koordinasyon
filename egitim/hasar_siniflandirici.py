@@ -11,16 +11,9 @@ import json
 import time
 from pathlib import Path
 
-import cv2
 import numpy as np
-import rasterio
 import torch
 import torchvision
-from rasterio.features import geometry_mask
-from rasterio.warp import transform_geom
-from rasterio.windows import from_bounds
-
-from scripts.hatay_olc import NEGATIF, POZITIF, kutu
 
 KOK = Path(__file__).resolve().parent.parent
 HATAY = KOK / "data" / "gercek" / "hatay"
@@ -32,6 +25,15 @@ def kesitler() -> dict:
     onbellek = HATAY / "kesitler.npz"
     if onbellek.exists():
         return dict(np.load(onbellek))
+    # Kesit cikarmak icin gerekir; egitim sunucusunda hazir npz ile calisilir.
+    import cv2
+    import rasterio
+    from rasterio.features import geometry_mask
+    from rasterio.warp import transform_geom
+    from rasterio.windows import from_bounds
+
+    from scripts.hatay_olc import NEGATIF, POZITIF, kutu
+
     bloklar = json.load(open(next(HATAY.glob("monit/*builtUpA*.json"))))["features"]
     x, y, parca, sinif = [], [], [], []
     for once_yol in sorted(glob.glob(str(HATAY / "maxar" / "*_2022-12-22.tif"))):
@@ -100,14 +102,18 @@ def main():
     ayrac = argparse.ArgumentParser()
     ayrac.add_argument("--tur", type=int, default=30)
     ayrac.add_argument("--tohum", type=int, default=0)
+    ayrac.add_argument("--veri", help="egitim.hasar_veri ciktisi (tum bolgeler); yoksa yalniz Antakya")
+    ayrac.add_argument("--cikti", default=str(HATAY))
     secim = ayrac.parse_args()
     torch.manual_seed(secim.tohum)
     torch.set_num_threads(4)
     rng = np.random.default_rng(secim.tohum)
-    v = kesitler()
+    v = dict(np.load(secim.veri)) if secim.veri else kesitler()
+    bolge = v.get("bolge", np.full(len(v["y"]), "AOI11"))
     etiketli = v["y"] >= 0
-    test = etiketli & (v["parca"] == TEST_PARCA)
-    havuz = np.flatnonzero(etiketli & (v["parca"] != TEST_PARCA))
+    test_parcasi = (v["parca"] == TEST_PARCA) & (bolge == "AOI11")
+    test = etiketli & test_parcasi
+    havuz = np.flatnonzero(etiketli & ~test_parcasi)
     rng.shuffle(havuz)
     dogrulama, egitim = havuz[: len(havuz) * 15 // 100], havuz[len(havuz) * 15 // 100:]
     print(f"egitim {len(egitim)} (pozitif {v['y'][egitim].sum()}), dogrulama {len(dogrulama)} "
@@ -155,12 +161,12 @@ def main():
     for oran in (0.05, 0.10, 0.20):
         e = np.quantile(pt[~et], 1 - oran)
         print(f"  test egrisi: yanlis alarm %{oran * 100:.0f} iken duyarlilik {(pt[et] >= e).sum()}/{et.sum()}")
-    hepsi = v["parca"] == TEST_PARCA
+    hepsi = test_parcasi
     ph = tahmin(m, v["x"][hepsi], cihaz)
     for sinif in ["Destroyed", "Damaged", "Possibly damaged"]:
         s = v["sinif"][hepsi] == sinif
         print(f"  test {sinif}: {(ph[s] >= esik).sum()}/{s.sum()} isaretlendi")
-    torch.save(m.state_dict(), HATAY / f"hasar_resnet18_t{secim.tohum}.pt")
+    torch.save(m.state_dict(), Path(secim.cikti) / f"hasar_resnet18_t{secim.tohum}{'_tum' if secim.veri else ''}.pt")
 
 
 if __name__ == "__main__":
