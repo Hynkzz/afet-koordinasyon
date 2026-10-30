@@ -187,7 +187,7 @@ Hangi model hangi kamerada (mAP@0,5, `olcumler/yolo-egitim-2026-10-29.md`):
 
 | Kamera | Model | Neden |
 |---|---|---|
-| Yer seviyesi, el kamerası, haber görüntüsü | hazır `yolo11n.pt` | Bu videolarda gözle en iyi sonuç; eğitilen modeller yer seviyesinde hiçbir ölçümde açık fark vermedi |
+| Yer seviyesi, el kamerası, haber görüntüsü | hazır `yolo11n.pt` | COCO128 (yer seviyesi fotoğraflar) 0,784, karisik2 0,518; afet videolarında gözle de en iyisi |
 | Yüksek güvenlik kamerası, direk | `karisik2-yolo11n.pt` (C2A + COCO + MOT17) | MOT20'de 0,790 (640 px), hazır model 0,516 |
 | İnsansız hava aracı, kuş bakışı | `karisik2-yolo11n.pt` | C2A testinde 0,781, hazır model 0,160 |
 
