@@ -85,6 +85,7 @@ def main():
     ayrac.add_argument("--test-bolge", required=True)
     ayrac.add_argument("--modeller", default="deney")
     ayrac.add_argument("--ince-ayar", type=int, nargs="*", default=[50, 100])
+    ayrac.add_argument("--kurulumlar", nargs="*", default=["erken", "siyam", "siyam_norm", "sonrasi"])
     secim = ayrac.parse_args()
     cihaz = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(0)
@@ -96,6 +97,8 @@ def main():
     olasilik = {}
     for mimari, norm in KURULUMLAR:
         ad = f"{mimari}{'_norm' if norm else ''}"
+        if ad not in secim.kurulumlar:
+            continue
         m = MIMARI[mimari]().to(cihaz)
         m.load_state_dict(torch.load(Path(secim.modeller) / f"model_{ad}_{secim.test_bolge}_t0.pt", map_location=cihaz))
         temel = copy.deepcopy(m.state_dict())
