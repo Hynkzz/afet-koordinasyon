@@ -63,7 +63,7 @@ CUDA_VISIBLE_DEVICES="" ~/afet-yolo/venv/bin/python -m egitim.hasar_siniflandiri
 | 1 | 0,818 | 10/81 (%12,3) | 10/24 (%41,7) | 14/809 (%1,7) |
 | 2 | 0,807 | 16/81 (%19,8) | 16/28 (%57,1) | 12/809 (%1,5) |
 
-Test eğrisinden okunan işletme noktaları (betimleme; eşik testte ayarlanmadı demek değil, yalnız eğrinin şekli):
+Test eğrisinden okunan işletme noktaları (yalnızca eğrinin şeklini gösterir; bu eşikler test verisinde belirlendiği için başarı iddiası olarak kullanılmaz):
 
 | Yanlış alarm | Tohum 0 | Tohum 1 | Tohum 2 |
 |---|---|---|---|
