@@ -263,3 +263,24 @@ düşük ya da eşit: model enkazlı mahalledeki sağlam binayı da ayırıyor, 
 **Sonuç:** Bina etiketi Antakya'da belirgin iyileşme verdi ve model mahalle ezberi yapmıyor. Ama a)'daki
 0,76–0,86 değerleri aynı depremin başka bölgeleriyle eğitilmiş modelden; yeni bir depremde yerel etiket
 olmadan beklenecek düzey c)'deki 0,56–0,70'tir. Yerel 50–100 bina etiketi bu yüzden gereklidir.
+
+## 8. Yerel etiket sayısı (yalnız baş ince ayarı, bina etiketli modeller)
+
+```
+python -m egitim.hasar_degerlendir --veri v128/xbd.npz v128/endonezya2.npz v128/bina2.npz --test-bolge AOI11 \
+    --modeller deney_bina --kurulumlar siyam sonrasi --ince-ayar 100 200 400 800
+```
+
+k etiket (yarısı hasarlı) bölgeden seçilir, ölçüm kalan binalarda; 3 tekrar ortalaması. Bölgedeki
+hasarlıların %80'inden fazlasını isteyen k atlandı (800 hiçbir bölgede, 400 Adıyaman ve Kahramanmaraş'ta).
+Test AUC, her bölgede o k için en iyi mimari:
+
+| Bölge (hasarlı bina) | 0 | 100 | 200 | 400 |
+|---|---|---|---|---|
+| Antakya (327) | 0,855 | 0,907 | 0,911 | 0,929 |
+| Kahramanmaraş (201) | 0,787 | 0,873 | 0,885 | – |
+| Adıyaman (182) | 0,759 | 0,836 | 0,826 | – |
+| İslahiye (318) | 0,632 | 0,698 | 0,720 | 0,761 |
+
+100'den sonra kazanç azalıyor (100→200: −0,01 ile +0,02; 200→400: +0,02 ile +0,04). En çok zayıf
+bölge İslahiye kazanıyor. 400'den büyük k için bu bölgelerde yeterli hasarlı bina yok.
