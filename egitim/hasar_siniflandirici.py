@@ -102,17 +102,32 @@ def main():
     ayrac = argparse.ArgumentParser()
     ayrac.add_argument("--tur", type=int, default=30)
     ayrac.add_argument("--tohum", type=int, default=0)
-    ayrac.add_argument("--veri", help="egitim.hasar_veri ciktisi (tum bolgeler); yoksa yalniz Antakya")
+    ayrac.add_argument("--veri", nargs="+", help="kesit npz dosyalari (hasar_veri, xbd_veri); yoksa yalniz Antakya")
     ayrac.add_argument("--cikti", default=str(HATAY))
-    ayrac.add_argument("--test-bolge", help="bu bolge (ör. AOI04) tamamen test; egitime hic girmez")
+    ayrac.add_argument("--test-bolge", help="bu bolge (ör. AOI04) tamamen test; 'turkiye' = tum AOI bolgeleri")
     secim = ayrac.parse_args()
     torch.manual_seed(secim.tohum)
     torch.set_num_threads(4)
     rng = np.random.default_rng(secim.tohum)
-    v = dict(np.load(secim.veri)) if secim.veri else kesitler()
+    if secim.veri:
+        parcalar = []
+        for yol in secim.veri:
+            d = dict(np.load(yol))
+            tut = d["y"] >= 0  # belirsizler bellege alinmaz
+            parcalar.append({k: d[k][tut] for k in ("x", "y", "parca", "sinif", "bolge")})
+            del d
+        v = {k: np.concatenate([p[k] for p in parcalar]) for k in parcalar[0]}
+        del parcalar
+    else:
+        v = kesitler()
     bolge = v.get("bolge", np.full(len(v["y"]), "AOI11"))
     etiketli = v["y"] >= 0
-    test_parcasi = (bolge == secim.test_bolge) if secim.test_bolge else (v["parca"] == TEST_PARCA) & (bolge == "AOI11")
+    if secim.test_bolge == "turkiye":
+        test_parcasi = np.char.startswith(bolge.astype(str), "AOI")
+    elif secim.test_bolge:
+        test_parcasi = bolge == secim.test_bolge
+    else:
+        test_parcasi = (v["parca"] == TEST_PARCA) & (bolge == "AOI11")
     test = etiketli & test_parcasi
     havuz = np.flatnonzero(etiketli & ~test_parcasi)
     rng.shuffle(havuz)
@@ -162,12 +177,18 @@ def main():
     for oran in (0.05, 0.10, 0.20):
         e = np.quantile(pt[~et], 1 - oran)
         print(f"  test egrisi: yanlis alarm %{oran * 100:.0f} iken duyarlilik {(pt[et] >= e).sum()}/{et.sum()}")
+    test_bolgeleri = sorted(set(bolge[test]))
+    if len(test_bolgeleri) > 1:
+        for b in test_bolgeleri:
+            s = bolge[test] == b
+            print(f"  bolge {b}: AUC {auc(pt[s], et[s]):.3f} ({et[s].sum()} pozitif / {s.sum()})")
     hepsi = test_parcasi
     ph = tahmin(m, v["x"][hepsi], cihaz)
     for sinif in ["Destroyed", "Damaged", "Possibly damaged"]:
         s = v["sinif"][hepsi] == sinif
         print(f"  test {sinif}: {(ph[s] >= esik).sum()}/{s.sum()} isaretlendi")
-    torch.save(m.state_dict(), Path(secim.cikti) / f"hasar_resnet18_t{secim.tohum}{'_tum' if secim.veri else ''}.pt")
+    ad = f"hasar_resnet18_t{secim.tohum}_{secim.test_bolge or 'antakya'}_{len(secim.veri or [])}veri.pt"
+    torch.save(m.state_dict(), Path(secim.cikti) / ad)
 
 
 if __name__ == "__main__":
