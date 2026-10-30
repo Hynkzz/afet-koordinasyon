@@ -86,12 +86,24 @@ def main():
     ayrac.add_argument("--modeller", default="deney")
     ayrac.add_argument("--ince-ayar", type=int, nargs="*", default=[50, 100])
     ayrac.add_argument("--kurulumlar", nargs="*", default=["erken", "siyam", "siyam_norm", "sonrasi"])
+    ayrac.add_argument("--zor-negatif-m", type=float, default=0,
+                       help="yalniz bir hasarli binaya bu kadar metreden yakin hasarsizlar negatif sayilir")
+    ayrac.add_argument("--tohum", type=int, default=0)
     secim = ayrac.parse_args()
     cihaz = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(0)
     np.random.seed(0)
     v = Veri(secim.veri)
-    test = np.flatnonzero((v.y >= 0) & (v.bolge == secim.test_bolge))
+    test = np.flatnonzero((v.y >= 0) & v.bolgede(secim.test_bolge))
+    if secim.zor_negatif_m:
+        # Mahalle ezberi testi: enkazli mahalledeki saglam binalar; model cevreye bakiyorsa burada duser.
+        poz = test[v.y[test] == 1]
+        neg = test[v.y[test] == 0]
+        dy = (v.lat[neg, None] - v.lat[None, poz]) * 111_195
+        dx = (v.lon[neg, None] - v.lon[None, poz]) * 111_195 * np.cos(np.radians(v.lat[neg, None]))
+        yakin = np.hypot(dx, dy).min(axis=1) <= secim.zor_negatif_m
+        test = np.sort(np.concatenate([poz, neg[yakin]]))
+        print(f"zor negatif: {yakin.sum()}/{len(neg)} hasarsiz bina hasarliya {secim.zor_negatif_m:.0f} m'den yakin")
     et = v.y[test] == 1
     sonuc = {"test_bolge": secim.test_bolge, "test_n": int(len(test)), "test_pozitif": int(et.sum())}
     olasilik = {}
@@ -100,7 +112,8 @@ def main():
         if ad not in secim.kurulumlar:
             continue
         m = MIMARI[mimari]().to(cihaz)
-        m.load_state_dict(torch.load(Path(secim.modeller) / f"model_{ad}_{secim.test_bolge}_t0.pt", map_location=cihaz))
+        dosya = f"model_{ad}_{secim.test_bolge.replace('*', 'hepsi')}_t{secim.tohum}.pt"
+        m.load_state_dict(torch.load(Path(secim.modeller) / dosya, map_location=cihaz))
         temel = copy.deepcopy(m.state_dict())
         p = {"duz": tahmin(m, v, test, cihaz, norm, False), "tta": tahmin(m, v, test, cihaz, norm, True)}
         adabn(m, v, test, cihaz, norm)
@@ -131,7 +144,8 @@ def main():
         p = np.mean([olasilik[a][tur] for a in olasilik], axis=0)
         sonuc[f"topluluk_{tur}"] = olc(p, et)
     print("topluluk", {t: round(sonuc[f'topluluk_{t}']['auc'], 3) for t in ("duz", "tta", "adabn", "adabn_tta")})
-    json.dump(sonuc, open(Path(secim.modeller) / f"degerlendirme_{secim.test_bolge}.json", "w"), indent=1)
+    ek = f"_zor{secim.zor_negatif_m:.0f}" if secim.zor_negatif_m else ""
+    json.dump(sonuc, open(Path(secim.modeller) / f"degerlendirme_{secim.test_bolge.replace('*', 'hepsi')}{ek}.json", "w"), indent=1)
 
 
 if __name__ == "__main__":

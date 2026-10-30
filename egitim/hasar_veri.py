@@ -40,13 +40,30 @@ def gorsel(yol: str, olay: str = TURKIYE) -> str:
     return MAXAR + on + yol.replace(".json", "-visual.tif")
 
 
+def merkez(geometri: dict) -> tuple[float, float]:
+    l, b, r, t = kutu(geometri["coordinates"])
+    return (l + r) / 2, (b + t) / 2
+
+
 def parca_isle(bloklar: list, once: str, sonra: str, parca: str, bolge: str, negatif_sinir: int) -> list:
     sonuc = []
     with rasterio.open(once) as o, rasterio.open(sonra) as s:
         if o.crs != s.crs or o.transform != s.transform:
             print(f"{bolge} {parca}: izgara farkli, atlandi")
             return sonuc
-        for f in bloklar:
+        # Parcaya dusenler once ucuz geometriyle bulunur; hasarsizlar goruntu okunmadan seyreltilir
+        # (eskiden 30 bin binanin hepsi okunup sonra atiliyordu).
+        sinir = transform_geom(o.crs, "EPSG:4326", {"type": "Polygon", "coordinates": [[
+            [o.bounds.left, o.bounds.bottom], [o.bounds.right, o.bounds.bottom], [o.bounds.right, o.bounds.top],
+            [o.bounds.left, o.bounds.top], [o.bounds.left, o.bounds.bottom]]]})
+        sl, sb, sr, st = kutu(sinir["coordinates"])
+        icerde = [f for f in bloklar if sl <= merkez(f["geometry"])[0] <= sr and sb <= merkez(f["geometry"])[1] <= st]
+        negatif = [i for i, f in enumerate(icerde) if f["properties"]["damage_gra"] in NEGATIF]
+        if len(negatif) > negatif_sinir * 1.2:
+            at = set(np.random.default_rng(0).choice(negatif, len(negatif) - int(negatif_sinir * 1.2), replace=False).tolist())
+            icerde = [f for i, f in enumerate(icerde) if i not in at]
+        for f in icerde:
+            lon, lat = merkez(f["geometry"])
             g = transform_geom("EPSG:4326", o.crs, f["geometry"])
             if g["type"] == "Point":
                 x, y = g["coordinates"]
@@ -66,7 +83,7 @@ def parca_isle(bloklar: list, once: str, sonra: str, parca: str, bolge: str, neg
             yigin = np.concatenate([a, c, m[None] * 255]).astype(np.uint8)
             kesit = np.stack([cv2.resize(k, (BOYUT, BOYUT), interpolation=cv2.INTER_AREA) for k in yigin], axis=-1)
             sinif = f["properties"]["damage_gra"]
-            sonuc.append((kesit, 1 if sinif in POZITIF else 0 if sinif in NEGATIF else -1, parca, sinif, bolge))
+            sonuc.append((kesit, 1 if sinif in POZITIF else 0 if sinif in NEGATIF else -1, parca, sinif, bolge, lon, lat))
     # Hasarsiz cok fazla olan bolgelerde (Cianjur 45 bin) bellek icin negatifler seyreltilir.
     negatif = [i for i, s in enumerate(sonuc) if s[1] == 0]
     if len(negatif) > negatif_sinir:
@@ -76,10 +93,11 @@ def parca_isle(bloklar: list, once: str, sonra: str, parca: str, bolge: str, neg
     return sonuc
 
 
-def kaydet(cikti: str, x, y, parca, sinif, bolge):
+def kaydet(cikti: str, x, y, parca, sinif, bolge, lon, lat):
     # Buyuk kesitler bellege sigmaz: x ayri .npy (egitimde mmap ile okunur), gerisi kucuk npz.
     np.save(cikti.replace(".npz", "_x.npy"), np.stack(x))
-    np.savez(cikti, y=np.array(y), parca=np.array(parca), sinif=np.array(sinif), bolge=np.array(bolge))
+    np.savez(cikti, y=np.array(y), parca=np.array(parca), sinif=np.array(sinif), bolge=np.array(bolge),
+             lon=np.array(lon), lat=np.array(lat))
 
 
 def main():
@@ -108,8 +126,8 @@ def main():
 
     with ThreadPoolExecutor(8) as havuz:
         satirlar = [s for parca in havuz.map(lambda i: parca_isle(*i), isler) for s in parca]
-    x, y, parca, sinif, bolge = zip(*satirlar)
-    kaydet(secim.cikti, x, y, parca, sinif, bolge)
+    x, y, parca, sinif, bolge, lon, lat = zip(*satirlar)
+    kaydet(secim.cikti, x, y, parca, sinif, bolge, lon, lat)
     y = np.array(y)
     print(f"toplam {len(y)} kesit, pozitif {(y == 1).sum()}, negatif {(y == 0).sum()}, belirsiz {(y == -1).sum()}")
 

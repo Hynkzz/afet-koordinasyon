@@ -32,6 +32,13 @@ class Veri:
         for k in ("y", "parca", "sinif", "bolge"):
             setattr(self, k, np.concatenate([m[k].astype(str) if k != "y" else m[k] for m in meta]))
         self.parca = np.char.add(np.char.add(self.bolge, ":"), self.parca)
+        # Koordinat yalniz yeni cikarilan dosyalarda var; zor negatif testi icin.
+        self.lon = np.concatenate([m.get("lon", np.full(len(m["y"]), np.nan)) for m in meta])
+        self.lat = np.concatenate([m.get("lat", np.full(len(m["y"]), np.nan)) for m in meta])
+
+    def bolgede(self, ad: str) -> np.ndarray:
+        """'AOI*' gibi sonu yildizli ad bir olayin tum bolgeleri (olay disarida birakma)."""
+        return np.char.startswith(self.bolge, ad[:-1]) if ad.endswith("*") else self.bolge == ad
 
     def al(self, indeks: np.ndarray) -> np.ndarray:
         cikti = np.empty((len(indeks),) + self.x[0].shape[1:], np.uint8)
@@ -191,11 +198,12 @@ def main():
 
     v = Veri(secim.veri)
     etiketli = v.y >= 0
-    test = np.flatnonzero(etiketli & (v.bolge == secim.test_bolge))
-    havuz_parca = np.unique(v.parca[etiketli & (v.bolge != secim.test_bolge)])
+    test_bolgesi = v.bolgede(secim.test_bolge)
+    test = np.flatnonzero(etiketli & test_bolgesi)
+    havuz_parca = np.unique(v.parca[etiketli & ~test_bolgesi])
     np.random.shuffle(havuz_parca)
     dogrulama_parca = set(havuz_parca[: max(1, len(havuz_parca) * 15 // 100)])
-    diger = etiketli & (v.bolge != secim.test_bolge)
+    diger = etiketli & ~test_bolgesi
     dp = np.isin(v.parca, list(dogrulama_parca))
     egitim, dogrulama = np.flatnonzero(diger & ~dp), np.flatnonzero(diger & dp)
     print(f"egitim {len(egitim)} (pozitif {v.y[egitim].sum()}), dogrulama {len(dogrulama)} "
@@ -235,7 +243,7 @@ def main():
               f"yanlis alarm %10 iken duyarlilik %{100 * np.mean(d10):.1f}", flush=True)
     m.load_state_dict(temel)
 
-    ad = f"{secim.mimari}{'_norm' if secim.ornek_norm else ''}_{secim.test_bolge}_t{secim.tohum}"
+    ad = f"{secim.mimari}{'_norm' if secim.ornek_norm else ''}_{secim.test_bolge.replace('*', 'hepsi')}_t{secim.tohum}"
     json.dump(sonuc, open(Path(secim.cikti) / f"sonuc_{ad}.json", "w"), indent=1)
     torch.save(m.state_dict(), Path(secim.cikti) / f"model_{ad}.pt")
 
