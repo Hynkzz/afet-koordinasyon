@@ -17,6 +17,8 @@ import pyarrow.parquet as pq
 
 BOYUT = 64
 PAY = 8  # piksel; bina cevresinden biraz baglam
+BELIRSIZSIZ = False
+ORAN = 1.0  # bina basina alinma olasiligi; bellek icin isci icinde seyreltilir
 SUTUNLAR = ["ml:source_file", "ml:disaster", "ml:damage", "ml:polygon_xy", "ml:polygon_len", "internal:relative_path"]
 ZIP = None
 
@@ -43,7 +45,7 @@ def isle(satir: dict) -> list:
     for i, (d, n) in enumerate(zip(hasar, satir["ml:polygon_len"])):
         halka = xy[bas:bas + n]
         bas += n
-        if d == 4 or (d == 0 and i not in secilen_negatif):
+        if d == 4 or (d == 0 and i not in secilen_negatif) or (d == 1 and BELIRSIZSIZ) or rng.random() > ORAN:
             continue
         x0, y0 = np.floor(halka.min(axis=0)).astype(int) - PAY
         x1, y1 = np.ceil(halka.max(axis=0)).astype(int) + PAY
@@ -65,7 +67,14 @@ def main():
     ayrac.add_argument("--zip", required=True)
     ayrac.add_argument("--cikti", required=True)
     ayrac.add_argument("--isci", type=int, default=8)
+    ayrac.add_argument("--boyut", type=int, default=64)
+    ayrac.add_argument("--pay", type=int, default=8)
+    ayrac.add_argument("--sinir", type=int, default=10**9, help="pozitif ve negatiften en fazla kac kesit")
+    ayrac.add_argument("--belirsizsiz", action="store_true", help="hafif hasarlilari hic alma")
+    ayrac.add_argument("--oran", type=float, default=1.0, help="her binanin alinma olasiligi")
     secim = ayrac.parse_args()
+    global BOYUT, PAY, BELIRSIZSIZ, ORAN
+    BOYUT, PAY, BELIRSIZSIZ, ORAN = secim.boyut, secim.pay, secim.belirsizsiz, secim.oran
     z = zipfile.ZipFile(secim.zip)
     tablo = pq.read_table(io.BytesIO(z.read("METADATA/sample.parquet")), columns=SUTUNLAR).to_pylist()
     print(f"{len(tablo)} goruntu cifti")
@@ -75,9 +84,17 @@ def main():
             satirlar.extend(s)
             if (i + 1) % 1000 == 0:
                 print(f"{i + 1}/{len(tablo)}, {len(satirlar)} kesit", flush=True)
+    rng = np.random.default_rng(0)
+    # Sinif basina sinir: afetler arasi dengeyi bozmamak icin rastgele alt kume.
+    secilen = []
+    for e in (1, 0, -1):
+        i = [k for k, s in enumerate(satirlar) if s[1] == e]
+        secilen += rng.choice(i, min(len(i), secim.sinir), replace=False).tolist() if i else []
+    satirlar = [satirlar[k] for k in sorted(secilen)]
     x, y, parca, sinif, bolge = zip(*satirlar)
     y = np.array(y)
-    np.savez(secim.cikti, x=np.stack(x), y=y, parca=np.array(parca), sinif=np.array(sinif), bolge=np.array(bolge))
+    np.save(secim.cikti.replace(".npz", "_x.npy"), np.stack(x))
+    np.savez(secim.cikti, y=y, parca=np.array(parca), sinif=np.array(sinif), bolge=np.array(bolge))
     print(f"toplam {len(y)} kesit, pozitif {(y == 1).sum()}, negatif {(y == 0).sum()}, belirsiz {(y == -1).sum()}")
 
 

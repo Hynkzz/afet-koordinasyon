@@ -27,12 +27,15 @@ HATAY = KOK / "data" / "gercek" / "hatay"
 MAXAR = "https://maxar-opendata.s3.amazonaws.com/events/"
 TURKIYE = "Kahramanmaras-turkey-earthquake-23"
 BOYUT = 64
+PAY_M = 4.0
 NOKTA_YARI_M = 8.0
 os.environ.setdefault("GDAL_DISABLE_READDIR_ON_OPEN", "EMPTY_DIR")
 
 
 def gorsel(yol: str, olay: str = TURKIYE) -> str:
     # Turkiye dosyasindaki yollar olay klasorune goreli, digerleri olay adiyla baslar.
+    if yol.startswith("http"):
+        return yol
     on = "" if yol.startswith(olay) else olay + "/"
     return MAXAR + on + yol.replace(".json", "-visual.tif")
 
@@ -53,7 +56,7 @@ def parca_isle(bloklar: list, once: str, sonra: str, parca: str, bolge: str, neg
             l, b, r, t = kutu(g["coordinates"])
             if l < o.bounds.left or r > o.bounds.right or b < o.bounds.bottom or t > o.bounds.top:
                 continue
-            w = from_bounds(l - 4, b - 4, r + 4, t + 4, o.transform).round_offsets().round_lengths()
+            w = from_bounds(l - PAY_M, b - PAY_M, r + PAY_M, t + PAY_M, o.transform).round_offsets().round_lengths()
             a, c = o.read([1, 2, 3], window=w), s.read([1, 2, 3], window=w)
             if a.shape != c.shape or min(a.shape[1:]) < 8:
                 continue
@@ -73,16 +76,26 @@ def parca_isle(bloklar: list, once: str, sonra: str, parca: str, bolge: str, neg
     return sonuc
 
 
+def kaydet(cikti: str, x, y, parca, sinif, bolge):
+    # Buyuk kesitler bellege sigmaz: x ayri .npy (egitimde mmap ile okunur), gerisi kucuk npz.
+    np.save(cikti.replace(".npz", "_x.npy"), np.stack(x))
+    np.savez(cikti, y=np.array(y), parca=np.array(parca), sinif=np.array(sinif), bolge=np.array(bolge))
+
+
 def main():
     ayrac = argparse.ArgumentParser()
     ayrac.add_argument("--parcalar", default=str(EMSR / "parcalar.json"))
     ayrac.add_argument("--cikti", default=str(EMSR / "kesitler.npz"))
     ayrac.add_argument("--antakyasiz", action="store_true", help="yerel Antakya parcalarini ekleme")
     ayrac.add_argument("--negatif-sinir", type=int, default=10**9, help="parca basina en fazla hasarsiz kesit")
+    ayrac.add_argument("--boyut", type=int, default=64)
+    ayrac.add_argument("--pay-m", type=float, default=4.0, help="bina cevresinden alinan baglam (metre)")
     secim = ayrac.parse_args()
+    global BOYUT, PAY_M
+    BOYUT, PAY_M = secim.boyut, secim.pay_m
     isler = []
     for o in json.load(open(secim.parcalar)):
-        bloklar = json.load(open(o["dosya"]))["features"]
+        bloklar = json.load(open(KOK / o["dosya"]))["features"]
         olay = o.get("olay", TURKIYE)
         for parca, (once, sonra) in o["ortak"].items():
             isler.append((bloklar, gorsel(once, olay), gorsel(sonra, olay), parca, o["aoi"], secim.negatif_sinir))
@@ -96,8 +109,7 @@ def main():
     with ThreadPoolExecutor(8) as havuz:
         satirlar = [s for parca in havuz.map(lambda i: parca_isle(*i), isler) for s in parca]
     x, y, parca, sinif, bolge = zip(*satirlar)
-    np.savez_compressed(secim.cikti, x=np.stack(x), y=np.array(y), parca=np.array(parca),
-                        sinif=np.array(sinif), bolge=np.array(bolge))
+    kaydet(secim.cikti, x, y, parca, sinif, bolge)
     y = np.array(y)
     print(f"toplam {len(y)} kesit, pozitif {(y == 1).sum()}, negatif {(y == 0).sum()}, belirsiz {(y == -1).sum()}")
 
