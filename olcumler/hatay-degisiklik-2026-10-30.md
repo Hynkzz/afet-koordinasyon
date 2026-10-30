@@ -118,3 +118,26 @@ etiketlerinin bölgeye göre farklı yorumlanması (blok/nokta, farklı analistl
 kamerası için anlamı: model her kurulum yerinde kendi görüntüsüyle (yerel referans)
 çalışmalı; genel bir model tek başına yeterli değil.
 Modeller sunucuda: `~/afet-yolo/hasar/hasar_resnet18_t*_tum.pt`.
+
+## 4. xBD ve başka deprem verisi eklendi (64 piksel, 7 kanal model, tohum 0)
+
+- xBD: Hugging Face `isp-uv-es/xview2-taco` (CC BY-NC-SA 4.0, 35,15 GB, sunucuda). 19 afet, çoğu
+  kasırga/yangın/sel; deprem yalnız Meksika (57 hasarlı bina). Pozitif = major + destroyed,
+  negatif = no-damage, minor dışarıda. Görüntü başına en fazla 2 × pozitif negatif: 139.304 kesit
+  (61.464 pozitif, 40.980 negatif, 36.860 belirsiz).
+- Endonezya Cianjur 2022: Copernicus EMSR641 + Maxar; 5.093 kesit (422 pozitif).
+- Fas EMSR695 ve Myanmar EMSR798 hasar paketleri herkese açık indirilemedi (403); Afganistan 2022
+  ve Japonya 2024 için Copernicus derecelendirmesi bulunamadı.
+
+Test bölgesi eğitime hiç girmedi; değerler test AUC (yanlış alarm %10 iken yakalanan):
+
+| Test bölgesi | Yalnız Türkiye | Yalnız xBD | xBD + Türkiye | xBD + Türkiye + Endonezya |
+|---|---|---|---|---|
+| Kahramanmaraş | 0,570 (39/389) | 0,739 | 0,651 (118/389) | 0,651 (99/389) |
+| Antakya | 0,625 (69/275) | 0,636 | 0,726 (101/275) | 0,676 (82/275) |
+| Malatya | 0,692 (90/267) | 0,481 | 0,505 (37/267) | 0,547 (40/267) |
+| Osmaniye | 0,537 (21/160) | 0,546 | 0,537 (31/160) | 0,548 (30/160) |
+
+"Yalnız xBD": Türkiye'nin 7 bölgesi birden test (toplam AUC 0,631; Gaziantep 0,767, Adıyaman 0,538,
+İslahiye 0,573). Veri eklemek bölgeye göre değişen etki yapıyor; hiçbir kurulum görmediği bölgede
+AUC 0,74'ü geçmedi.
