@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Antakya Uydu Demosu</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="antakya.css">
+</head>
+<body>
+<header>
+  <h1>Antakya uydu demosu <span class="ek">6 Şubat 2023 depremi, batı Antakya ~2 × 2 km. Model Antakya'yı eğitimde hiç görmedi.</span></h1>
+  <a class="dugme" href="index.html">Panele dön</a>
+</header>
+<main class="demo">
+  <section class="panel">
+    <h2>Uydu görüntüsü
+      <span class="secim" id="goruntu-sec">
+        <button class="kucuk" data-goruntu="oncesi">Deprem öncesi</button>
+        <button class="kucuk secili" data-goruntu="sonrasi">Deprem sonrası</button>
+      </span>
+    </h2>
+    <div class="icerik"><div id="harita"></div></div>
+  </section>
+  <aside class="panel">
+    <h2>Değerlendirme</h2>
+    <div class="icerik govde">
+      <h3>Görünüm</h3>
+      <div class="secim" id="gorunum-sec">
+        <button class="kucuk secili" data-gorunum="model">Model tahmini</button>
+        <button class="kucuk" data-gorunum="gercek">Gerçek etiket</button>
+        <button class="kucuk" data-gorunum="karsilastirma">Karşılaştırma</button>
+      </div>
+      <label class="satir"><input type="checkbox" id="cizgi-gizle"> Bina çizgilerini gizle</label>
+
+      <h3>Eşik <span class="ek" id="esik-deger"></span></h3>
+      <input type="range" id="esik" min="0.05" max="0.95" step="0.05">
+
+      <h3>Ölçüm <span class="ek" id="olcum-alt"></span></h3>
+      <table class="sayilar">
+        <tr><td>AUC (eşikten bağımsız)</td><td id="s-auc"></td></tr>
+        <tr><td>Doğru işaret</td><td id="s-dogru"></td></tr>
+        <tr><td>Kaçan yıkık bina</td><td id="s-kacan"></td></tr>
+        <tr><td>Yanlış alarm</td><td id="s-yanlis"></td></tr>
+        <tr><td>İşaretlenen bina (tümü)</td><td id="s-isaret"></td></tr>
+      </table>
+      <p class="not">Kırmızı işaretli binalar kuyruğa öncelik 1 vaka olarak düşerdi; operatör uydu görüntüsünden doğrular.</p>
+
+      <h3>Lejant</h3>
+      <ul class="lejant" id="lejant"></ul>
+
+      <h3>Model</h3>
+      <p class="not" id="model"></p>
+      <p class="kaynak" id="kaynak"></p>
+    </div>
+  </aside>
+</main>
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="antakya.js"></script>
+</body>
+</html>

@@ -107,10 +107,10 @@ def main():
         "etiketli": int(len(ee)), "etiketli_yikik": int(ee.sum()), "auc": round(auc(pe, ee), 3),
         "dogru_isaret": int((tahmin & ee).sum()), "yanlis_alarm": int((tahmin & ~ee).sum()),
         "kacan": int((~tahmin & ee).sum()),
-        "model": "ResNet18 siyam, bina etiketli; Antakya (AOI11) egitimde hic yok",
+        "model": "ResNet18 ikiz ağ, bina etiketli; Antakya (AOI11) eğitimde hiç yok",
         "oncesi": {"tarih": "2022-12-22", "sinir": goruntu(MAXAR / f"{PARCA}_2022-12-22.tif", CIKTI / "oncesi.jpg")},
         "sonrasi": {"tarih": "2023-02-11", "sinir": goruntu(MAXAR / f"{PARCA}_2023-02-11.tif", CIKTI / "sonrasi.jpg")},
-        "kaynak": "Goruntu: Maxar Open Data (CC BY-NC 4.0). Bina: Overture Maps. Gercek etiket: Copernicus EMSR648 + HOT/OSM.",
+        "kaynak": "Görüntü: Maxar Open Data (CC BY-NC 4.0). Bina: Overture Maps. Gerçek etiket: Copernicus EMSR648 + HOT/OSM.",
     }
     json.dump(ozet, open(CIKTI / "antakya_ozet.json", "w"), ensure_ascii=False, indent=1)
     print(json.dumps({k: v for k, v in ozet.items() if k not in ("oncesi", "sonrasi")}, ensure_ascii=False))

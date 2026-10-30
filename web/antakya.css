@@ -1,0 +1,46 @@
+h1 .ek { font-size: 12px; font-weight: 400; color: var(--yazi-3); margin-left: 8px; }
+
+a.dugme {
+  color: var(--yazi);
+  text-decoration: none;
+  background: #24282d;
+  border: 1px solid var(--cizgi);
+  border-radius: 3px;
+  padding: 4px 10px;
+}
+a.dugme:hover { border-color: var(--notr); }
+
+main.demo {
+  grid-template-columns: 1fr 300px;
+  grid-template-rows: 1fr;
+  grid-template-areas: none;
+}
+
+main.demo .icerik { flex: 1; min-height: 0; position: relative; }
+#harita { position: absolute; inset: 0; background: var(--zemin); }
+
+.govde { overflow-y: auto; padding: 4px 10px 10px; }
+.govde h3 { font-size: 12px; font-weight: 600; color: var(--yazi-2); margin: 12px 0 6px; }
+
+.secim { display: flex; gap: 4px; flex-wrap: wrap; }
+.secim button.secili { border-color: var(--yazi-2); color: var(--yazi); background: #2c3138; }
+h2 .secim button { text-transform: none; letter-spacing: 0; }
+
+.satir { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--yazi-2); }
+input[type="range"] { width: 100%; accent-color: var(--notr); }
+
+.sayilar { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.sayilar td { padding: 3px 0; border-bottom: 1px solid var(--cizgi); }
+.sayilar td:last-child { text-align: right; }
+
+.not { color: var(--yazi-2); font-size: 12px; margin: 8px 0 0; }
+.kaynak { color: var(--yazi-3); font-size: 11px; margin: 8px 0 0; }
+
+.lejant { list-style: none; margin: 0; padding: 0; }
+.lejant li { display: flex; align-items: center; gap: 8px; padding: 2px 0; color: var(--yazi-2); }
+.lejant i { width: 16px; height: 10px; display: inline-block; flex: none; }
+
+@media (max-width: 800px) {
+  main.demo { grid-template-columns: 1fr; grid-template-rows: 60vh auto; }
+  h1 .ek { display: none; }
+}

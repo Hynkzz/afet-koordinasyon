@@ -15,7 +15,7 @@
  "dogru_isaret": 95,
  "yanlis_alarm": 123,
  "kacan": 118,
- "model": "ResNet18 siyam, bina etiketli; Antakya (AOI11) egitimde hic yok",
+ "model": "ResNet18 ikiz ağ, bina etiketli; Antakya (AOI11) eğitimde hiç yok",
  "oncesi": {
   "tarih": "2022-12-22",
   "sinir": [
@@ -42,5 +42,5 @@
    ]
   ]
  },
- "kaynak": "Goruntu: Maxar Open Data (CC BY-NC 4.0). Bina: Overture Maps. Gercek etiket: Copernicus EMSR648 + HOT/OSM."
+ "kaynak": "Görüntü: Maxar Open Data (CC BY-NC 4.0). Bina: Overture Maps. Gerçek etiket: Copernicus EMSR648 + HOT/OSM."
 }
