@@ -1,0 +1,10 @@
+{
+  "ad": "Direk kamerası: bina yıkımı",
+  "aciklama": "Sanal direk kamerasının gördüğü iki bina yıkılır; tespit görüntüden yapılır. Önce 'python -m direk' çalışıyor olmalı.",
+  "adimlar": [
+    { "t": 0, "not": "Deprem öncesi: direk 50 binayı izliyor", "is": { "tip": "kanal", "ad": "LoRa", "acik": true } },
+    { "t": 5, "not": "Tam görünen bina yıkılıyor", "is": { "tip": "bina", "bina_id": "w453112210", "durum": "yikik" } },
+    { "t": 15, "not": "Yarısı başka binanın arkasında kalan bina yıkılıyor", "is": { "tip": "bina", "bina_id": "w1159111937", "durum": "yikik" } },
+    { "t": 30, "not": "Senaryo sonu", "is": { "tip": "kanal", "ad": "LoRa", "acik": true } }
+  ]
+}

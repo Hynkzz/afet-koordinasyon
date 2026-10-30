@@ -57,15 +57,15 @@ class Yayinci:
         simdi = time.time()
         if tip == "sinyal":
             self.son_sinyal[veri["dugum_id"]] = veri
-        elif tip in ("olay", "mesaj", "portal"):
+        elif tip in ("olay", "mesaj", "portal", "bina"):
             self.gecmis.append((simdi, tip, veri))
-            if tip != "portal":
+            if tip not in ("portal", "bina"):
                 self.son_yayinlar.append({"tip": tip, "veri": veri, "alindi": datetime.now().astimezone().isoformat()})
         while self.gecmis and simdi - self.gecmis[0][0] > RAPOR_PENCERESI_DK * 60:
             self.gecmis.popleft()
 
     def ozet(self) -> dict:
-        olaylar, mesajlar, portal = {}, {}, {}
+        olaylar, mesajlar, portal, binalar = {}, {}, {}, {}
         for _, tip, veri in self.gecmis:
             if tip == "olay":
                 olaylar[veri["olay_id"]] = veri
@@ -73,6 +73,8 @@ class Yayinci:
                 mesajlar[veri["id"]] = veri
             elif tip == "portal":
                 portal[veri["kod"]] = veri
+            elif tip == "bina":
+                binalar[veri["bina_id"]] = veri["durum"]
         gecerli = [k for k in portal.values() if not k["asilsiz"]]
         return {
             "dakika": RAPOR_PENCERESI_DK,
@@ -81,6 +83,8 @@ class Yayinci:
             "oncelik1": sum(k["triyaj"]["oncelik"] == 1 for k in gecerli),
             "insan": sum(o["etiket"] == "insan" for o in olaylar.values()),
             "vurus": sum(o["etiket"] == "vurus" for o in olaylar.values()),
+            "yikik_bina": sum(d == "yikik" for d in binalar.values()),
+            "hasarli_bina": sum(d == "hasarli" for d in binalar.values()),
             "zayif_dugum": sorted(d for d, s in self.son_sinyal.items() if s["rssi"] <= -85 or s["paket_alim_orani"] <= 0.8),
         }
 

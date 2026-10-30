@@ -108,7 +108,7 @@ def test_kural_sosu_en_az_oncelik_2():
     assert llm.kural_triyaj("Su lazım", sos=True).oncelik == 2
 
 
-OZET = {"dakika": 10, "sos": 3, "portal": 2, "oncelik1": 1, "insan": 4, "vurus": 1, "zayif_dugum": ["d4"]}
+OZET = {"dakika": 10, "sos": 3, "portal": 2, "oncelik1": 1, "insan": 4, "vurus": 1, "yikik_bina": 2, "hasarli_bina": 0, "zayif_dugum": ["d4"]}
 
 
 def test_rapor_llm_yoksa_sayilardan_kurulur(monkeypatch):
@@ -147,3 +147,8 @@ def test_rapor_dugum_numarasi_uydurma_sayilmaz(llm_var):
 def test_rapor_olgulari_turkce_satirlar():
     olgular = llm.rapor_olgulari(OZET)
     assert "Gelen SOS sayısı: 3" in olgular and "oncelik1" not in olgular
+
+
+def test_kural_raporu_direk_binalarini_sayar():
+    assert "2 yıkık bina" in llm.kural_raporu(OZET)
+    assert "Direk kamerasının yıkık bulduğu bina: 2" in llm.rapor_olgulari(OZET)

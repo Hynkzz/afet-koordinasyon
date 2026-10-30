@@ -147,6 +147,10 @@ def kural_raporu(ozet: dict) -> str:
         tespit.append(f"{ozet['insan']} insan")
     if ozet["vurus"]:
         tespit.append(f"{ozet['vurus']} vuruş")
+    if ozet["yikik_bina"]:
+        tespit.append(f"{ozet['yikik_bina']} yıkık bina")
+    if ozet["hasarli_bina"]:
+        tespit.append(f"{ozet['hasarli_bina']} hasarlı bina")
     if tespit:
         parcalar.append("Tespitler: " + ", ".join(tespit) + ".")
     if ozet["zayif_dugum"]:
@@ -163,6 +167,8 @@ def rapor_olgulari(ozet: dict) -> str:
         f"Portal çağrılarından en acil (öncelik 1) olan: {ozet['oncelik1']}",
         f"Kamerada insan tespiti: {ozet['insan']}",
         f"Mikrofonda vuruş tespiti: {ozet['vurus']}",
+        f"Direk kamerasının yıkık bulduğu bina: {ozet['yikik_bina']}",
+        f"Direk kamerasının hasarlı bulduğu bina: {ozet['hasarli_bina']}",
         "Zayıf sinyalli düğümler: " + (", ".join(ozet["zayif_dugum"]) or "yok"),
     ])
 
