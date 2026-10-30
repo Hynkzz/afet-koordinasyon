@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from server import main
 from server.main import app
 from server.models import BinaOlayi, Binalar
 
@@ -49,6 +50,23 @@ def test_binalar_feature_collection_donner(istemci):
 
 def test_bilinmeyen_bina_404(istemci):
     assert istemci.post("/api/bina", json=olay("yok")).status_code == 404
+
+
+def test_direk_yerlesim_feature_collection_donner(istemci, tmp_path, monkeypatch):
+    dosya = tmp_path / "yerlesim.geojson"
+    dosya.write_text(json.dumps({"type": "FeatureCollection", "features": [
+        {"type": "Feature", "geometry": {"type": "Point", "coordinates": [34.8, 39.8]},
+         "properties": {"gorunen_bina": 3, "menzildeki_bina": 5, "cati_ustu": False}}]}))
+    monkeypatch.setattr(main, "YERLESIM_DOSYASI", dosya)
+    cevap = istemci.get("/api/direk-yerlesim")
+    assert cevap.status_code == 200
+    assert cevap.json()["type"] == "FeatureCollection"
+    assert len(cevap.json()["features"]) == 1
+
+
+def test_direk_yerlesim_yokken_404(istemci, tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "YERLESIM_DOSYASI", tmp_path / "yok.geojson")
+    assert istemci.get("/api/direk-yerlesim").status_code == 404
 
 
 def test_gecersiz_durum_422(istemci):

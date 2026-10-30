@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import itertools
+import json
 import logging
 import os
 import time
@@ -25,6 +26,7 @@ from server.sources.mock import MockKaynak
 
 KOK = Path(__file__).resolve().parent.parent
 SENARYO_DIZINI = KOK / "scenarios"
+YERLESIM_DOSYASI = KOK / "data" / "direk_yerlesim.geojson"
 BIRLESTIRME_SURESI = 3.0
 RAPOR_ARALIGI = 60
 RAPOR_PENCERESI_DK = 10
@@ -322,6 +324,14 @@ async def dugumler() -> Dugumler:
 @app.get("/api/binalar")
 async def binalar() -> Binalar:
     return app.state.binalar
+
+
+@app.get("/api/direk-yerlesim")
+async def direk_yerlesim() -> dict:
+    # Her istekte dosyadan okunur; analiz betigi dosyayi yeniden yazdiginda panel taze veri gorur.
+    if not YERLESIM_DOSYASI.exists():
+        raise HTTPException(404, "yerlesim analizi yok")
+    return json.loads(YERLESIM_DOSYASI.read_text())
 
 
 # Disa aktarilan dosya baska kurumlarla paylasilabilir; cihaz kimligi ve ad gibi kisisel alanlar cikarilir.

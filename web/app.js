@@ -152,6 +152,7 @@ const katman = {
   isi: L.heatLayer([], { radius: 28, blur: 22, maxZoom: 17, gradient: { 0.3: renk.uyari, 0.7: renk.kritik, 1: "#ff9b9e" } }).addTo(harita),
   dugum: L.layerGroup().addTo(harita),
   kapsama: L.layerGroup(),
+  yerlesim: L.layerGroup(),
   sensor: L.layerGroup().addTo(harita),
 };
 L.control.layers(null, {
@@ -161,6 +162,7 @@ L.control.layers(null, {
   "Isı haritası (açık vakalar)": katman.isi,
   "Düğümler": katman.dugum,
   "Kapsama alanları": katman.kapsama,
+  "Direk yerleşimi": katman.yerlesim,
   "Kamera ve mikrofon": katman.sensor,
 }).addTo(harita);
 const dugumIsaretleri = new Map();
@@ -231,6 +233,40 @@ function binaGuncelle(olay) {
 fetch("/api/binalar")
   .then((c) => c.json())
   .then((veri) => katman.bina.addData(veri));
+
+// --- Direk yerlesimi ---
+fetch("/api/direk-yerlesim")
+  .then((c) => (c.ok ? c.json() : null))
+  .then((veri) => {
+    // Analiz yoksa katman bos kalir; hata gosterilmez.
+    if (!veri) return;
+    const p = veri.parametreler || {};
+    const enBuyuk = Math.max(1, ...veri.features.map((f) => f.properties.gorunen_bina));
+    for (const f of veri.features) {
+      const [lon, lat] = f.geometry.coordinates;
+      const o = f.properties;
+      const secili = o.secim_sirasi != null;
+      // Renk anlam tasimaz, yalnizca gri ton; dolgu gorulen bina sayisini belirtir.
+      const isaret = L.circleMarker([lat, lon], {
+        radius: secili ? 8 : 4,
+        stroke: secili,
+        color: renk["yazi-2"],
+        weight: 1,
+        fillColor: renk.notr,
+        fillOpacity: 0.1 + 0.8 * (o.gorunen_bina / enBuyuk),
+      }).addTo(katman.yerlesim);
+      if (secili) isaret.bindTooltip(String(o.secim_sirasi), { permanent: true, direction: "top" });
+      const satirlar = [
+        ["Direk adayı"],
+        [null, "Görülen bina: " + o.gorunen_bina],
+        [null, "Menzildeki bina: " + o.menzildeki_bina],
+      ];
+      if (o.cati_ustu) satirlar.push([null, "Bina çatısında"]);
+      if (secili) satirlar.push([null, "Seçim sırası: " + o.secim_sirasi]);
+      satirlar.push([null, "Direk " + p.direk_m + " m, menzil " + p.menzil_m + " m"]);
+      isaret.bindPopup(popup(satirlar));
+    }
+  });
 
 let mesajNoktasi = 0;
 
