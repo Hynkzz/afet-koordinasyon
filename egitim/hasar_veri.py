@@ -5,6 +5,7 @@ Nokta etiketli bolgelerde (builtUpP) nokta cevresinde 16 m kare alinir.
 Cikti: data/gercek/emsr/kesitler.npz (x, y, parca, sinif, bolge) -> egitim.hasar_siniflandirici --veri
   ~/afet-yolo/venv/bin/python -m egitim.hasar_veri
 """
+import argparse
 import glob
 import json
 import os
@@ -23,17 +24,20 @@ from scripts.hatay_olc import NEGATIF, POZITIF, kutu
 KOK = Path(__file__).resolve().parent.parent
 EMSR = KOK / "data" / "gercek" / "emsr"
 HATAY = KOK / "data" / "gercek" / "hatay"
-MAXAR = "https://maxar-opendata.s3.amazonaws.com/events/Kahramanmaras-turkey-earthquake-23/"
+MAXAR = "https://maxar-opendata.s3.amazonaws.com/events/"
+TURKIYE = "Kahramanmaras-turkey-earthquake-23"
 BOYUT = 64
 NOKTA_YARI_M = 8.0
 os.environ.setdefault("GDAL_DISABLE_READDIR_ON_OPEN", "EMPTY_DIR")
 
 
-def gorsel(yol: str) -> str:
-    return MAXAR + yol.replace(".json", "-visual.tif")
+def gorsel(yol: str, olay: str = TURKIYE) -> str:
+    # Turkiye dosyasindaki yollar olay klasorune goreli, digerleri olay adiyla baslar.
+    on = "" if yol.startswith(olay) else olay + "/"
+    return MAXAR + on + yol.replace(".json", "-visual.tif")
 
 
-def parca_isle(bloklar: list, once: str, sonra: str, parca: str, bolge: str) -> list:
+def parca_isle(bloklar: list, once: str, sonra: str, parca: str, bolge: str, negatif_sinir: int) -> list:
     sonuc = []
     with rasterio.open(once) as o, rasterio.open(sonra) as s:
         if o.crs != s.crs or o.transform != s.transform:
@@ -60,25 +64,39 @@ def parca_isle(bloklar: list, once: str, sonra: str, parca: str, bolge: str) -> 
             kesit = np.stack([cv2.resize(k, (BOYUT, BOYUT), interpolation=cv2.INTER_AREA) for k in yigin], axis=-1)
             sinif = f["properties"]["damage_gra"]
             sonuc.append((kesit, 1 if sinif in POZITIF else 0 if sinif in NEGATIF else -1, parca, sinif, bolge))
+    # Hasarsiz cok fazla olan bolgelerde (Cianjur 45 bin) bellek icin negatifler seyreltilir.
+    negatif = [i for i, s in enumerate(sonuc) if s[1] == 0]
+    if len(negatif) > negatif_sinir:
+        at = set(np.random.default_rng(0).choice(negatif, len(negatif) - negatif_sinir, replace=False).tolist())
+        sonuc = [s for i, s in enumerate(sonuc) if i not in at]
     print(f"{bolge} {parca}: {len(sonuc)} kesit")
     return sonuc
 
 
 def main():
+    ayrac = argparse.ArgumentParser()
+    ayrac.add_argument("--parcalar", default=str(EMSR / "parcalar.json"))
+    ayrac.add_argument("--cikti", default=str(EMSR / "kesitler.npz"))
+    ayrac.add_argument("--antakyasiz", action="store_true", help="yerel Antakya parcalarini ekleme")
+    ayrac.add_argument("--negatif-sinir", type=int, default=10**9, help="parca basina en fazla hasarsiz kesit")
+    secim = ayrac.parse_args()
     isler = []
-    for o in json.load(open(EMSR / "parcalar.json")):
+    for o in json.load(open(secim.parcalar)):
         bloklar = json.load(open(o["dosya"]))["features"]
+        olay = o.get("olay", TURKIYE)
         for parca, (once, sonra) in o["ortak"].items():
-            isler.append((bloklar, gorsel(once), gorsel(sonra), parca, o["aoi"]))
-    # Antakya yerelde indirilmis parcalardan; test parcasi da burada, egitim betigi ayirir.
-    antakya = json.load(open(next(HATAY.glob("monit/*builtUpA*.json"))))["features"]
-    for once in sorted(glob.glob(str(HATAY / "maxar" / "*_2022-12-22.tif"))):
-        isler.append((antakya, once, once.replace("2022-12-22", "2023-02-11"), Path(once).name.split("_")[0], "AOI11"))
+            isler.append((bloklar, gorsel(once, olay), gorsel(sonra, olay), parca, o["aoi"], secim.negatif_sinir))
+    if not secim.antakyasiz:
+        # Antakya yerelde indirilmis parcalardan; test parcasi da burada, egitim betigi ayirir.
+        antakya = json.load(open(next(HATAY.glob("monit/*builtUpA*.json"))))["features"]
+        for once in sorted(glob.glob(str(HATAY / "maxar" / "*_2022-12-22.tif"))):
+            isler.append((antakya, once, once.replace("2022-12-22", "2023-02-11"), Path(once).name.split("_")[0],
+                          "AOI11", secim.negatif_sinir))
 
     with ThreadPoolExecutor(8) as havuz:
         satirlar = [s for parca in havuz.map(lambda i: parca_isle(*i), isler) for s in parca]
     x, y, parca, sinif, bolge = zip(*satirlar)
-    np.savez_compressed(EMSR / "kesitler.npz", x=np.stack(x), y=np.array(y), parca=np.array(parca),
+    np.savez_compressed(secim.cikti, x=np.stack(x), y=np.array(y), parca=np.array(parca),
                         sinif=np.array(sinif), bolge=np.array(bolge))
     y = np.array(y)
     print(f"toplam {len(y)} kesit, pozitif {(y == 1).sum()}, negatif {(y == 0).sum()}, belirsiz {(y == -1).sum()}")
