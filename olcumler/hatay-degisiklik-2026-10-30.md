@@ -217,3 +217,49 @@ k=100 ince ayar, tüm ağ (bölüm 5) ile yalnız baş karşılaştırması (her
 
 Sonuç: Az etiketle yalnız son katmanı eğitmek tüm ağı güncellemekten iyi (3 bölgede +0,03–0,05).
 Osmaniye'de yerel etiket hâlâ işe yaramıyor (ince ayarsız 0,668 daha iyi).
+
+## 7. Bina bazlı etiket ve ezber kontrolleri (egitim/bina_etiket.py)
+
+```
+~/afet-yolo/venv/bin/python -m egitim.bina_etiket          # laptop: Overture + OSM yıkık + Copernicus
+python -m egitim.hasar_veri --parcalar data/gercek/emsr/parcalar_bina.json --cikti v128/bina2.npz --antakyasiz --boyut 128 --pay-m 10 --negatif-sinir 1500
+python -m egitim.hasar_model --veri v128/xbd.npz v128/endonezya2.npz v128/bina2.npz --test-bolge AOI11 --mimari siyam --tur 8
+python -m egitim.hasar_degerlendir --veri ... --test-bolge AOI11 --modeller deney_bina --kurulumlar siyam sonrasi --zor-negatif-m 100
+python -m egitim.hasar_model --veri ... --test-bolge "AOI*"      # Türkiye hiç görülmeden
+```
+
+Etiket kuralı (her bina Overture taban alanı): hasarsız = Copernicus "No visible damage" bloğunun içinde
+ya da o noktayı içeren bina; hasarlı = OSM `destroyed:building` (HOT/OSM gönüllüleri, ODbL, ~3.200 bina)
+ya da Copernicus Destroyed/Damaged noktasını içeren (8 m içinde en yakın) bina; hasarlı bloğun içindeki
+işaretsiz bina belirsiz, atlandı. Görüntüsü olan parçalarda 41.121 kesit (1.072 hasarlı). Malatya'da 0,
+Osmaniye'de 10 hasarlı bina olduğu için bina bazlı test Kahramanmaraş, Antakya, Adıyaman, İslahiye'de.
+
+**a) Aynı bina bazlı test, test bölgesi eğitime hiç girmedi** (AUC; düz / TTA / yalnız baş ince ayar k=100):
+
+| Bölge (test bina, hasarlı) | Blok etiketli model 2 (sonrası) | Bina etiketli, en iyi |
+|---|---|---|
+| Antakya (10.526, 327) | 0,764 / 0,775 / 0,882 | 0,856 / 0,873 / 0,921 (siyam) |
+| Kahramanmaraş (1.380, 259) | 0,797 / 0,824 / 0,855 | 0,788 / 0,821 / 0,866 (sonrası; siyam ince ayar) |
+| Adıyaman (6.182, 182) | – | 0,759 / 0,790 / 0,826 (sonrası) |
+| İslahiye (5.092, 318) | – | 0,633 / 0,629 / 0,692 (siyam) |
+
+Blok etiketli modeller bina testinde blok testindekinden yüksek çıktı (Kahramanmaraş 0,671 → 0,797):
+blok testindeki düşük sayıların bir kısmı test etiketinin kirliliğinden geliyordu.
+
+**b) Zor negatif (mahalle ezberi) testi:** yalnız bir hasarlı binaya 100 m'den yakın hasarsızlar negatif.
+Bina etiketli modeller (düz, en iyi): Antakya 0,844 (667 negatif), Kahramanmaraş 0,764 (110), Adıyaman
+0,753 (771), İslahiye 0,598 (1.666); topluluk 0,858 / 0,782 / 0,772 / 0,609. Normal testten en çok 0,02
+düşük ya da eşit: model enkazlı mahalledeki sağlam binayı da ayırıyor, çevreyi ezberlemiyor.
+
+**c) Deprem dışarıda (aynı olaydan hiç veri yok):**
+
+| Eğitim | Test | Siyam | Sonrası |
+|---|---|---|---|
+| xBD + Endonezya (Türkiye yok) | Türkiye 7 bölge, 41.121 bina (1.072 hasarlı) | 0,668 | 0,703 |
+| xBD + Türkiye (Endonezya yok) | Endonezya, 4.632 (422) | 0,591 | 0,558 |
+
+**d) Tohum:** Antakya, siyam, bina etiketli: 0,856 / 0,833 / 0,830 (tohum 0, 1, 2).
+
+**Sonuç:** Bina etiketi Antakya'da belirgin iyileşme verdi ve model mahalle ezberi yapmıyor. Ama a)'daki
+0,76–0,86 değerleri aynı depremin başka bölgeleriyle eğitilmiş modelden; yeni bir depremde yerel etiket
+olmadan beklenecek düzey c)'deki 0,56–0,70'tir. Yerel 50–100 bina etiketi bu yüzden gereklidir.

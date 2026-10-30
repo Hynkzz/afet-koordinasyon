@@ -503,3 +503,5 @@ Bina hasar tespiti ölçümleri:
 | Antakya gerçek veri, eğitimli sınıflandırıcı (3 tohum) | test AUC 0,79–0,82; yanlış alarm %10 iken 34–39/81 | `olcumler/hatay-degisiklik-2026-10-30.md` |
 | Görmediği bölgede sınıflandırıcı (4 bölge, ilk model) | test AUC 0,54–0,69 | `olcumler/hatay-degisiklik-2026-10-30.md` |
 | Model 2, görmediği bölge (sonrası, 128 piksel) | AUC 0,668–0,744; 100 yerel etiketle (yalnız baş) 0,624–0,911 | `olcumler/hatay-degisiklik-2026-10-30.md` |
+| Bina etiketi, görmediği bölge (aynı deprem) | AUC 0,63–0,86; 100 yerel etiketle 0,69–0,92 | `olcumler/hatay-degisiklik-2026-10-30.md` |
+| Görmediği deprem (Türkiye / Endonezya hiç görülmeden) | AUC 0,67–0,70 / 0,56–0,59 | `olcumler/hatay-degisiklik-2026-10-30.md` |
