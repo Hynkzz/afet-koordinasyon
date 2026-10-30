@@ -100,6 +100,7 @@ afet-projesi/
   olcumler/        ölçüm sonuçları
   kamera/          YOLO ile insan tespiti (ayrı program, ayrı ortam)
   vurus/           ses kaydında vuruş tespiti (ayrı program)
+  direk/           25 m direkte 360° kamera ile bina yıkımı tespiti (ayrı ortam)
   scripts/         ölçüm, veri ve karo indirme, hotspot/ erişim noktası
   tests/
 ```
@@ -198,6 +199,84 @@ bulduğunu `POST /api/olay` ile gönderir:
 yükseliş, darbenin sönmesi ve enerjisinin bantta toplanması, en az 3 düzenli
 aralıklı vuruş. Makine öğrenmesi yok; eşikler `vurus/tespit.py` başında.
 ESC-50 ile ölçüm: `olcumler/vurus-tespiti-2026-10-29.md`.
+
+## Direk kamerası ve bina hasar tespiti
+
+25 m yükseklikteki bir direğe konmuş 360° kamera binaları izler. Kurulumda bir kez
+her pikselin hangi binaya ait olduğu çıkarılır: bina taban alanları (OSM/Overture)
+yükseklikle prizmaya yükseltilir, pikselden binaya etiket haritası ve referans
+görüntü alınır. İzlemede her kare bina bina referansla karşılaştırılır (parlaklık
+referansa eşitlenir, binanın alanında değişen piksel oranı hesaplanır); değişen bina
+`POST /api/bina` ile bildirilir. Panelde bina yıkıksa kırmızı, hasarlıysa turuncu
+çizilir; kuyruğa adresli vaka düşer (yıkık öncelik 1, hasarlı 2). Karar art arda üç
+karede aynı kalınca bildirilir; 200 pikselden küçük görünen bina izlenmez. Cihaz
+tarafındaki ağır iş kurulumda biter, izlemede yalnızca piksel karşılaştırması vardır
+(`direk/tespit.py`).
+
+Çalıştırmak için önce sunucu, sonra direk programı:
+
+```bash
+.venv/bin/python -m server.main --kaynak mock
+~/afet-yolo/venv/bin/python -m direk --kare
+```
+
+`--kare` kareleri (üzerinde bina kutularıyla) panelin **Canlı İzleme** ekranına
+gönderir. Yıkım için panelde **Direk kamerası: bina yıkımı** senaryosu seçilir
+(`scenarios/bina-yikimi.json`).
+
+Bina verisi `data/binalar.geojson` dosyasındandır. OSM'de eksik kalan binalar
+Overture Maps ile tamamlanır (Overture dosyası ayrı indirilir, sonra birleştirilir):
+
+```bash
+.venv/bin/python -m scripts.bina_indir --bbox 39.80,34.79,39.83,34.83
+overturemaps download --bbox=34.79,39.80,34.83,39.83 -f geojson --type=building -o overture.geojson
+.venv/bin/python -m scripts.bina_indir --overture overture.geojson --osm data/binalar.geojson
+```
+
+Direk yerleşimi için bölgeye izgara halinde sanal direkler konur, her adımda en çok
+yeni binayı gören nokta seçilir:
+
+```bash
+.venv/bin/python -m scripts.direk_yerlesim --adim-m 100 --en-iyi 5
+```
+
+### Benzetimin sınırı
+
+Kamera görüntüsü sentetiktir: bina taban alanları düz renkli prizmalara yükseltilir,
+yıkılan bina düzensiz yüksekliğe ve enkaz dokusuna dönüşür. Senaryodaki `bina` adımı
+yalnızca görüntü üretimini değiştirir; tespit tarafı kararını yalnızca kareye bakarak
+verir. Aşağıdaki sayılar yöntemin mantığının çalıştığını gösterir, gerçek kameradaki
+doğruluğu göstermez.
+
+### Sonuçlar
+
+Benzetim (`olcumler/direk-benzetim-2026-10-30.md`), 40 denemede 81 yıkılan bina:
+bulunan 74 (%91,4), yıkım karelerinde yanlış binaya işaret 0, yıkımsız 42.260
+bina-karede yanlış alarm 0. Sınırı kurgudan gelir: benzetimde enkaz binanın kendi
+tabanından dışarı taşmaz, toz bulutu ve kamera kayması yoktur; yanlış alarmın 0
+olması sahnede yalnızca ışık ve gürültü değiştiği içindir (araç, gölge, kar, yağmur,
+gece yok). Kaçan 7 binanın 5'i 1.000 pikselden küçük görünüyor.
+
+Yerleşim (`olcumler/direk-benzetim-2026-10-30.md`, 2. bölüm): Yozgat merkezdeki
+4.593 binanın %81,0'ini (3.722) 30 direk görüyor, 60 direk %96,2'yi. Bu oranlar üst
+sınırdır: yerleşimde "görülüyor" eşiği tespitin izleme eşiğinden gevşektir ve bina
+yükseklikleri tahmindir.
+
+Antakya gerçek verisinde (`olcumler/hatay-degisiklik-2026-10-30.md`) aynı basit
+yöntem zayıftır: Maxar öncesi/sonrası uydu görüntüsünde 3.525 bina bloğunda test
+parçasında AUC 0,669 (fark), 0,659 (korelasyon), 0,591 (kenar oranı); benzetimdeki
+%91,4 gerçek veriye taşınmıyor. Nedenler: etiket birimi bina bloğu olduğu için tek
+binadaki yıkım ortalamada kayboluyor, öncesi ve sonrası farklı güneş/bakış açısı
+gölgeyi değişim gibi gösteriyor, etiket de yanılabilir. Direk kamerasında sabit
+kamera ve günlük referans bu sorunları hafifletir ama gölge ve ışık kalır. Bu sonuç,
+2. aşamada eğitimli sınıflandırıcıya geçmenin gerekçesidir.
+
+### Veri kaynakları ve lisanslar
+
+- Bina taban alanları ve adresler: OpenStreetMap (ODbL), Microsoft ML Buildings
+  (CDLA Permissive 2.0, Overture Maps üzerinden).
+- Antakya ölçümü: Maxar Open Data (CC BY-NC 4.0) uydu görüntüleri; cevap anahtarı
+  Copernicus EMS EMSR648 (OSM 06.02.2023 tabanlı bina blokları).
 
 ## Harita katmanları ve dışa aktarım
 
@@ -414,3 +493,10 @@ aynı makinede, 500 olay:
 | `--kaynak mock` | 3,06 ms | 3,18 ms | 3,57 ms | 6,20 ms |
 
 Süre HTTP isteğini de içerir; istemci tarayıcı değil Python betiğidir.
+
+Bina hasar tespiti ölçümleri:
+
+| Ölçüm | Sonuç | Belge |
+|---|---|---|
+| Direk benzetimi, tespit | 74/81 (%91,4), yanlış alarm 0 | `olcumler/direk-benzetim-2026-10-30.md` |
+| Antakya gerçek veri, basit değişiklik tespiti | AUC 0,59–0,67 | `olcumler/hatay-degisiklik-2026-10-30.md` |
