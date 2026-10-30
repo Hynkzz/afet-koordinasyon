@@ -75,3 +75,46 @@ Sonuç: Eğitimli sınıflandırıcı basit değişiklik tespitinden belirgin iy
 basit yöntemde 0,59–0,67). Yine de yanlış alarm %10'dayken hasarlı blokların ancak %42–48'ini
 buluyor. Doğrulama kümesinde 21 pozitif olduğu için seçilen eşik tohuma göre çok oynuyor
 (duyarlılık %12–28). Daha çok etiketli veri (diğer şehirler, tek bina etiketleri) gerekir.
+
+## 3. Diğer bölgeler eklendi (AI sunucusunda eğitim)
+
+```
+~/afet-yolo/venv/bin/python -m egitim.hasar_veri          # kesit çıkarma (laptop, Maxar bulut okuması, 14,5 dk)
+python -m egitim.hasar_siniflandirici --veri data/gercek/emsr/kesitler.npz --tohum 0       # 1, 2
+python -m egitim.hasar_siniflandirici --veri data/gercek/emsr/kesitler.npz --test-bolge AOI04   # bölge dışarıda
+```
+
+Veri: Copernicus EMSR648 bölgelerinden Maxar öncesi/sonrası parçası bulunan 6'sı + Antakya:
+AOI01 Gaziantep, AOI02 Adıyaman, AOI04 Kahramanmaraş, AOI05 Malatya, AOI06 Osmaniye,
+AOI10 İslahiye, AOI11 Antakya; 35 parça çifti, 26.207 kesit (1.470 pozitif, 24.123 negatif,
+614 belirsiz). Nokta etiketli bölgelerde (builtUpP) nokta çevresinde 16 m kare. Sunucu (RX 9070 XT),
+tur başına ~5 sn, model başına 150–181 sn.
+
+**a) Aynı Antakya test parçası (031133023303), diğer bölgeler eğitime eklendi:**
+
+| Tohum | Doğrulama AUC | Test AUC | Yanlış alarm %10 iken |
+|---|---|---|---|
+| 0 | 0,909 | 0,713 | 28/81 |
+| 1 | 0,894 | 0,771 | 41/81 |
+| 2 | 0,918 | 0,780 | 33/81 |
+
+Yalnız Antakya ile eğitilen modelden (0,79–0,82) daha kötü.
+
+**b) Bir bölge tamamen dışarıda (eğitime hiç girmedi), tohum 0:**
+
+| Test bölgesi | Test blok (pozitif) | Doğrulama AUC | Test AUC | Yanlış alarm %10 iken |
+|---|---|---|---|---|
+| AOI04 Kahramanmaraş | 1.668 (389) | 0,928 | 0,570 | 39/389 |
+| AOI11 Antakya | 3.519 (275) | 0,928 | 0,625 | 69/275 |
+| AOI05 Malatya | 2.402 (267) | 0,917 | 0,692 | 90/267 |
+| AOI06 Osmaniye | 2.167 (160) | 0,922 | 0,537 | 21/160 |
+
+**Sonuç:** Model görmediği bölgeye genellenmiyor (test AUC 0,54–0,69, rastgele 0,50).
+Doğrulama AUC'si (0,92) yanıltıcı: doğrulama blokları eğitimle aynı parçalardan rastgele
+seçildiği için komşu bloklar benziyor. Doğru değerlendirme bölge/parça dışarıda bırakmaktır.
+Neden olarak görülenler: bölgeler arası çekim tarihi, güneş ve bakış açısı farkı; Copernicus
+etiketlerinin bölgeye göre farklı yorumlanması (blok/nokta, farklı analistler). Raporda
+"görmediği şehirde çalıştığı ölçülmedi, ölçülünce zayıf çıktı" diye yazılmalı. Direk
+kamerası için anlamı: model her kurulum yerinde kendi görüntüsüyle (yerel referans)
+çalışmalı; genel bir model tek başına yeterli değil.
+Modeller sunucuda: `~/afet-yolo/hasar/hasar_resnet18_t*_tum.pt`.

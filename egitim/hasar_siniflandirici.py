@@ -104,6 +104,7 @@ def main():
     ayrac.add_argument("--tohum", type=int, default=0)
     ayrac.add_argument("--veri", help="egitim.hasar_veri ciktisi (tum bolgeler); yoksa yalniz Antakya")
     ayrac.add_argument("--cikti", default=str(HATAY))
+    ayrac.add_argument("--test-bolge", help="bu bolge (ör. AOI04) tamamen test; egitime hic girmez")
     secim = ayrac.parse_args()
     torch.manual_seed(secim.tohum)
     torch.set_num_threads(4)
@@ -111,7 +112,7 @@ def main():
     v = dict(np.load(secim.veri)) if secim.veri else kesitler()
     bolge = v.get("bolge", np.full(len(v["y"]), "AOI11"))
     etiketli = v["y"] >= 0
-    test_parcasi = (v["parca"] == TEST_PARCA) & (bolge == "AOI11")
+    test_parcasi = (bolge == secim.test_bolge) if secim.test_bolge else (v["parca"] == TEST_PARCA) & (bolge == "AOI11")
     test = etiketli & test_parcasi
     havuz = np.flatnonzero(etiketli & ~test_parcasi)
     rng.shuffle(havuz)
