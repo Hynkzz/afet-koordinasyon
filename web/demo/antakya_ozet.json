@@ -1,0 +1,46 @@
+{
+ "alan": [
+  36.1398,
+  36.2025,
+  36.1618,
+  36.2205
+ ],
+ "parca": "031133023302",
+ "esik": 0.5,
+ "bina": 4676,
+ "isaretlenen": 413,
+ "etiketli": 2840,
+ "etiketli_yikik": 213,
+ "auc": 0.811,
+ "dogru_isaret": 95,
+ "yanlis_alarm": 123,
+ "kacan": 118,
+ "model": "ResNet18 siyam, bina etiketli; Antakya (AOI11) egitimde hic yok",
+ "oncesi": {
+  "tarih": "2022-12-22",
+  "sinir": [
+   [
+    36.20197403010652,
+    36.13914252594491
+   ],
+   [
+    36.22102524643819,
+    36.16245292659242
+   ]
+  ]
+ },
+ "sonrasi": {
+  "tarih": "2023-02-11",
+  "sinir": [
+   [
+    36.20197403010652,
+    36.13914252594491
+   ],
+   [
+    36.22102524643819,
+    36.16245292659242
+   ]
+  ]
+ },
+ "kaynak": "Goruntu: Maxar Open Data (CC BY-NC 4.0). Bina: Overture Maps. Gercek etiket: Copernicus EMSR648 + HOT/OSM."
+}
