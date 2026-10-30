@@ -182,3 +182,38 @@ Antakya siyam + norm ince ayarsız %48,7; Malatya siyam + norm k=100 %42,4; Osma
 - Hiçbir mimari her bölgede en iyi değil; fark bölgeler arası farktan küçük.
 - Osmaniye ve Antakya'da etiket birimi bina bloğu (alan), Kahramanmaraş'ta nokta; blok etiketi
   hangi binanın yıkıldığını söylemediği için ince ayarı da zorlaştırıyor olabilir (ölçülmedi).
+
+## 6. Eğitimsiz iyileştirmeler ve yalnız baş ince ayarı (egitim/hasar_degerlendir.py)
+
+```
+python -m egitim.hasar_degerlendir --veri v128/xbd.npz v128/turkiye.npz v128/antakya.npz v128/endonezya.npz \
+    --test-bolge AOI04 --modeller deney
+```
+
+Bölüm 5'teki modeller üzerinde. TTA: 8 çevirme/döndürme ortalaması. AdaBN: BatchNorm istatistikleri
+test bölgesinin etiketsiz kesitlerinden yeniden. Topluluk: 4 mimarinin olasılık ortalaması.
+Baş ince ayarı: gövde dondurulur, yalnız son katman k etiketle (200 adım, 3 tekrar ortalaması).
+
+Test AUC, ince ayarsız (düz / TTA / AdaBN / AdaBN+TTA):
+
+| Bölge | En iyi tek model (düz) | Topluluk düz | Topluluk TTA | Topluluk AdaBN |
+|---|---|---|---|---|
+| Kahramanmaraş | 0,671 (sonrası; TTA 0,720) | 0,670 | 0,681 | 0,728 |
+| Antakya | 0,763 (siyam+norm; TTA 0,769) | 0,749 | 0,763 | 0,656 |
+| Malatya | 0,692 (sonrası) | 0,670 | 0,666 | 0,461 |
+| Osmaniye | 0,668 (sonrası) | 0,636 | 0,622 | 0,569 |
+
+AdaBN 4 bölgenin 3'ünde düşürdü (Malatya sonrası 0,692 → 0,389): kullanılmamalı. TTA ve topluluk
+küçük ve karışık etkili.
+
+k=100 ince ayar, tüm ağ (bölüm 5) ile yalnız baş karşılaştırması (her bölgede en iyi mimari):
+
+| Bölge | Tüm ağ, k=100 | Yalnız baş, k=50 | Yalnız baş, k=100 |
+|---|---|---|---|
+| Kahramanmaraş | 0,869 | 0,884 (siyam) | 0,911 (siyam) |
+| Antakya | 0,769 | 0,771 (sonrası) | 0,795 (sonrası) |
+| Malatya | 0,781 | 0,820 (siyam) | 0,830 (siyam) |
+| Osmaniye | 0,620 | 0,595 (sonrası) | 0,624 (sonrası) |
+
+Sonuç: Az etiketle yalnız son katmanı eğitmek tüm ağı güncellemekten iyi (3 bölgede +0,03–0,05).
+Osmaniye'de yerel etiket hâlâ işe yaramıyor (ince ayarsız 0,668 daha iyi).
