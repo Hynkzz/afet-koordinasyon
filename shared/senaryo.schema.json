@@ -65,6 +65,16 @@
                   "ad": { "enum": ["BLE", "LoRa", "Uydu"] },
                   "acik": { "type": "boolean" }
                 }
+              },
+              {
+                "description": "Yalnizca benzetim: sanal direk kamerasinin goruntusunde binayi yikar ya da geri getirir; tespit goruntuden yapilir.",
+                "type": "object", "additionalProperties": false,
+                "required": ["tip", "bina_id", "durum"],
+                "properties": {
+                  "tip": { "const": "bina" },
+                  "bina_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+                  "durum": { "enum": ["yikik", "normal"] }
+                }
               }
             ]
           }

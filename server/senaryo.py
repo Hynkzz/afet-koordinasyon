@@ -47,10 +47,17 @@ class KanalAdimi(Sema):
     acik: bool
 
 
+class BinaAdimi(Sema):
+    # Yalnizca benzetim: sanal direk kamerasinin uretecegi goruntuyu degistirir; tespit goruntuden yapilir.
+    tip: Literal["bina"]
+    bina_id: Annotated[str, Field(min_length=1, max_length=64)]
+    durum: Literal["yikik", "normal"]
+
+
 class Adim(Sema):
     t: Annotated[float, Field(ge=0)]
     not_: Annotated[str, Field(alias="not", max_length=200)] = ""
-    is_: Annotated[OlayAdimi | MesajAdimi | PortalAdimi | KanalAdimi, Field(alias="is", discriminator="tip")]
+    is_: Annotated[OlayAdimi | MesajAdimi | PortalAdimi | KanalAdimi | BinaAdimi, Field(alias="is", discriminator="tip")]
 
 
 class Senaryo(Sema):
@@ -80,8 +87,9 @@ class Oynatici:
 
     def __init__(self, olay: Callable[[Olay], Awaitable], mesaj: Callable[[MesajAdimi], Awaitable],
                  portal: Callable[[str, PortalAdimi], Awaitable], kanal: Callable[[str, bool], Awaitable],
-                 yayinla: Callable[[str, dict], Awaitable], sustur: Callable[[bool], None]):
-        self.olay, self.mesaj, self.portal, self.kanal = olay, mesaj, portal, kanal
+                 yayinla: Callable[[str, dict], Awaitable], sustur: Callable[[bool], None],
+                 bina: Callable[[str, str], Awaitable] | None = None):
+        self.olay, self.mesaj, self.portal, self.kanal, self.bina = olay, mesaj, portal, kanal, bina
         self.yayinla, self.sustur = yayinla, sustur
         self.gorev: asyncio.Task | None = None
         self.durum = {"durum": "bos"}
@@ -139,8 +147,10 @@ class Oynatici:
             await self.mesaj(i)
         elif i.tip == "portal":
             await self.portal(kimlik, i)
-        else:
+        elif i.tip == "kanal":
             await self.kanal(i.ad, i.acik)
+        elif self.bina:
+            await self.bina(i.bina_id, i.durum)
 
 
 def yukle(dizin: Path, dosya: str) -> Senaryo:
