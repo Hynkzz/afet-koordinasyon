@@ -145,10 +145,11 @@ class BinaOzellik(BaseModel):
     id: Annotated[str, Field(min_length=1, max_length=64)]
     yukseklik_m: Annotated[float, Field(ge=0)]
     kat: Annotated[int, Field(ge=0)] | None = None
-    yukseklik_kaynak: Literal["osm_yukseklik", "osm_kat", "tahmin"]
+    yukseklik_kaynak: Literal["osm_yukseklik", "osm_kat", "overture_yukseklik", "overture_kat", "tahmin"]
     adres: str | None = None
     ad: str | None = None
     tur: str | None = None
+    kaynak_veri: Literal["osm", "microsoft"] | None = None
 
 
 class Bina(BaseModel):

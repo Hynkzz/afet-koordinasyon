@@ -43,7 +43,8 @@
               "id": { "description": "Tekil bina kimligi; bina_olayi.schema.json'daki bina_id ile ayni.", "type": "string", "minLength": 1, "maxLength": 64 },
               "yukseklik_m": { "type": "number", "minimum": 0 },
               "kat": { "description": "Biliniyorsa kat sayisi.", "type": ["integer", "null"], "minimum": 0 },
-              "yukseklik_kaynak": { "enum": ["osm_yukseklik", "osm_kat", "tahmin"] },
+              "yukseklik_kaynak": { "enum": ["osm_yukseklik", "osm_kat", "overture_yukseklik", "overture_kat", "tahmin"] },
+              "kaynak_veri": { "description": "Sinirin kaynagi: OSM ya da Microsoft ML Buildings (Overture uzerinden).", "enum": ["osm", "microsoft"] },
               "adres": { "type": ["string", "null"] },
               "ad": { "type": ["string", "null"] },
               "tur": { "description": "OSM building degeri, or. \"apartments\".", "type": ["string", "null"] }

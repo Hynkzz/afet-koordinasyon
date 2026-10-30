@@ -172,7 +172,8 @@ her Feature bir `Polygon`; koordinat sırası **[boylam, enlem]**. Üst düzeyde
 | `id` | metin | Tekil bina kimliği, ör. `w90138310`. `bina_olayi` içindeki `bina_id` ile aynı |
 | `yukseklik_m` | sayı ≥ 0 | Metre |
 | `kat` | tam sayı ya da boş | Biliniyorsa kat sayısı |
-| `yukseklik_kaynak` | `"osm_yukseklik"` / `"osm_kat"` / `"tahmin"` | Yüksekliğin nereden geldiği |
+| `yukseklik_kaynak` | `"osm_yukseklik"` / `"osm_kat"` / `"overture_yukseklik"` / `"overture_kat"` / `"tahmin"` | Yüksekliğin nereden geldiği |
+| `kaynak_veri` | `"osm"` / `"microsoft"` (isteğe bağlı) | Bina sınırının kaynağı |
 | `adres` | metin ya da boş | |
 | `ad` | metin ya da boş | Bina adı, ör. okul adı |
 | `tur` | metin ya da boş | OSM `building` değeri, ör. `apartments` |
