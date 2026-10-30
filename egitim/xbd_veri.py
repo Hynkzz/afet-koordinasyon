@@ -23,9 +23,11 @@ SUTUNLAR = ["ml:source_file", "ml:disaster", "ml:damage", "ml:polygon_xy", "ml:p
 ZIP = None
 
 
-def ac(yol):
-    global ZIP
+def ac(yol, ayar):
+    # Python 3.14'te isciler forkserver ile baslar, ana surecin global degerlerini almaz: acikca verilir.
+    global ZIP, BOYUT, PAY, BELIRSIZSIZ, ORAN
     ZIP = zipfile.ZipFile(yol)
+    BOYUT, PAY, BELIRSIZSIZ, ORAN = ayar
 
 
 def resim(yol: str) -> np.ndarray:
@@ -78,7 +80,7 @@ def main():
     z = zipfile.ZipFile(secim.zip)
     tablo = pq.read_table(io.BytesIO(z.read("METADATA/sample.parquet")), columns=SUTUNLAR).to_pylist()
     print(f"{len(tablo)} goruntu cifti")
-    with Pool(secim.isci, initializer=ac, initargs=(secim.zip,)) as havuz:
+    with Pool(secim.isci, initializer=ac, initargs=(secim.zip, (BOYUT, PAY, BELIRSIZSIZ, ORAN))) as havuz:
         satirlar = []
         for i, s in enumerate(havuz.imap_unordered(isle, tablo, chunksize=16)):
             satirlar.extend(s)
