@@ -125,6 +125,10 @@ def main():
 
         rng = np.random.default_rng(0)
         for k in secim.ince_ayar:
+            # Olcum icin bolgede yeterli hasarli bina kalmali.
+            if k // 2 > 0.8 * et.sum():
+                print(f"  {ad} k={k}: atlandi (bolgede {et.sum()} hasarli)", flush=True)
+                continue
             aucs = {"bas": [], "adabn_bas": []}
             for _ in range(3):
                 poz, neg = test[et], test[~et]
