@@ -141,3 +141,44 @@ Test bölgesi eğitime hiç girmedi; değerler test AUC (yanlış alarm %10 iken
 "Yalnız xBD": Türkiye'nin 7 bölgesi birden test (toplam AUC 0,631; Gaziantep 0,767, Adıyaman 0,538,
 İslahiye 0,573). Veri eklemek bölgeye göre değişen etki yapıyor; hiçbir kurulum görmediği bölgede
 AUC 0,74'ü geçmedi.
+
+## 5. Model 2: mimari, çoğaltma, yerel ince ayar (egitim/hasar_model.py, sunucu)
+
+```
+python -m egitim.xbd_veri --zip xbd/xview2.zip --cikti v128/xbd.npz --boyut 128 --pay 24 --belirsizsiz --oran 0.25
+python -m egitim.hasar_veri --parcalar data/gercek/emsr/parcalar.json --cikti v128/turkiye.npz --antakyasiz --boyut 128 --pay-m 10
+python -m egitim.hasar_model --veri v128/xbd.npz v128/turkiye.npz v128/antakya.npz v128/endonezya.npz \
+    --test-bolge AOI04 --mimari siyam --tur 8 --ince-ayar 20 50 100
+```
+
+- Kesit 128×128, bina çevresinde 10 m (xBD 24 piksel) bağlam. xBD alt kümesi 25.523 kesit
+  (15.343 pozitif). Eğitim ~48 bin kesit (test bölgesine göre değişir).
+- Çoğaltma: öncesi ve sonrasına ayrı parlaklık/kontrast/renk, aralarında ±4 piksel kayma, çevirme/döndürme.
+- Mimari: erken (7 kanal tek ağ), siyam (öncesi ve sonrası aynı ResNet18'den ayrı, özellik + fark),
+  siyam + örnek normu (her görüntü kendi ortalama/sapmasıyla), sonrası (yalnız sonrası + maske).
+- Doğrulama bütün parçalardan seçildi; yine de 0,97–0,98 çıktı (iyimser, kullanılmadı).
+- İnce ayar: test bölgesinden k etiketli bina (yarısı hasarlı), 3 tekrar ortalaması, ölçüm bölgenin kalanında.
+- Model başına eğitim 190–414 sn (RX 9070 XT), tohum 0.
+
+Test AUC (bölge eğitime hiç girmedi); sütunlar: ince ayarsız / k=20 / k=50 / k=100:
+
+| Bölge | Erken | Siyam | Siyam + norm | Sonrası |
+|---|---|---|---|---|
+| Kahramanmaraş | 0,663 / 0,750 / 0,838 / 0,848 | 0,616 / 0,719 / 0,853 / 0,869 | 0,598 / 0,686 / 0,760 / 0,822 | 0,671 / 0,783 / 0,845 / 0,861 |
+| Antakya | 0,594 / 0,625 / 0,688 / 0,726 | 0,668 / 0,618 / 0,697 / 0,724 | 0,763 / 0,676 / 0,747 / 0,769 | 0,744 / 0,636 / 0,713 / 0,761 |
+| Malatya | 0,631 / 0,725 / 0,741 / 0,752 | 0,653 / 0,666 / 0,745 / 0,772 | 0,578 / 0,704 / 0,748 / 0,781 | 0,692 / 0,656 / 0,703 / 0,743 |
+| Osmaniye | 0,595 / 0,539 / 0,576 / 0,570 | 0,629 / 0,536 / 0,574 / 0,593 | 0,609 / 0,570 / 0,600 / 0,620 | 0,668 / 0,569 / 0,589 / 0,585 |
+| Ortalama | 0,621 / – / – / 0,724 | 0,642 / – / – / 0,740 | 0,637 / – / – / 0,748 | 0,694 / – / – / 0,738 |
+
+Yanlış alarm %10 iken yakalanan (seçilmiş): Kahramanmaraş sonrası k=100 %65,8 (ince ayarsız %37,6);
+Antakya siyam + norm ince ayarsız %48,7; Malatya siyam + norm k=100 %42,4; Osmaniye en iyi %24,4.
+
+**Sonuç:**
+- İnce ayarsız en iyi ortalama "yalnız sonrası" modelinde (0,694): öncesi/sonrası açı farkını
+  hiç kullanmamak bu veride avantaj. Her bölgede ilk turdaki 64 piksel modelden iyi ya da eşit
+  (Kahramanmaraş 0,570→0,671, Antakya 0,625→0,744, Malatya 0,692 eşit, Osmaniye 0,537→0,668).
+- 100 yerel etiketle ince ayar 3 bölgede belirgin kazanç verdi (Kahramanmaraş 0,87'ye kadar),
+  Osmaniye'de zarar verdi. 20 etiket çoğunlukla yetmiyor, sonuç tekrardan tekrara çok oynuyor.
+- Hiçbir mimari her bölgede en iyi değil; fark bölgeler arası farktan küçük.
+- Osmaniye ve Antakya'da etiket birimi bina bloğu (alan), Kahramanmaraş'ta nokta; blok etiketi
+  hangi binanın yıkıldığını söylemediği için ince ayarı da zorlaştırıyor olabilir (ölçülmedi).
