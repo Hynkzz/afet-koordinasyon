@@ -135,6 +135,42 @@ class Dugumler(BaseModel):
     features: list[Dugum]
 
 
+class Cokgen(BaseModel):
+    type: Literal["Polygon"]
+    # Halka listesi; her halka [boylam, enlem] kose listesi.
+    coordinates: list[list[tuple[float, float]]]
+
+
+class BinaOzellik(BaseModel):
+    id: Annotated[str, Field(min_length=1, max_length=64)]
+    yukseklik_m: Annotated[float, Field(ge=0)]
+    kat: Annotated[int, Field(ge=0)] | None = None
+    yukseklik_kaynak: Literal["osm_yukseklik", "osm_kat", "tahmin"]
+    adres: str | None = None
+    ad: str | None = None
+    tur: str | None = None
+
+
+class Bina(BaseModel):
+    type: Literal["Feature"]
+    geometry: Cokgen
+    properties: BinaOzellik
+
+
+class Binalar(BaseModel):
+    type: Literal["FeatureCollection"]
+    features: list[Bina]
+
+
+class BinaOlayi(Sema):
+    bina_id: Annotated[str, Field(min_length=1, max_length=64)]
+    durum: Literal["hasarli", "yikik", "normal"]
+    guven: Oran
+    gorunurluk: Oran
+    kaynak: Kimlik
+    zaman: AwareDatetime
+
+
 class SenaryoIstek(Sema):
     dosya: Annotated[str, Field(min_length=1, max_length=100)]
     temizle: bool = False

@@ -12,6 +12,8 @@ uymuyorsa sunucu reddeder ve sebebini döner.
 | `sinyal.schema.json` | Haberleşme | Düğüm bağlantı ölçümü güncellendiğinde |
 | `siginak.schema.json` | İnşaat | Bir kez, dosya olarak (`data/siginaklar.geojson`) |
 | `dugum.schema.json` | EEE + İnşaat | Bir kez, dosya olarak (`data/dugumler.geojson`) |
+| `bina.schema.json` | İnşaat | Bir kez, dosya olarak (`data/binalar.geojson`) |
+| `bina_olayi.schema.json` | Yapay zekâ | Kamera bir binanın hasar durumunu değiştirdiğinde (`POST /api/bina`) |
 | `senaryo.schema.json` | İnşaat (+ ekip) | Demo senaryosu, dosya olarak (`scenarios/*.json`) |
 
 Genel kurallar:
@@ -158,6 +160,54 @@ konumuna koyar. GeoJSON `FeatureCollection`, her Feature bir `Point`.
 ```
 
 Şu anki `data/dugumler.geojson` örnektir: konumlar ve 80 m menzil tahmin.
+
+## Bina (inşaat → bilgisayar)
+
+Haritadaki "Binalar" katmanı bu dosyadan çizilir. GeoJSON `FeatureCollection`,
+her Feature bir `Polygon`; koordinat sırası **[boylam, enlem]**. Üst düzeydeki
+`kaynak` veri atfıdır.
+
+| `properties` alanı | Tür | Açıklama |
+|---|---|---|
+| `id` | metin | Tekil bina kimliği, ör. `w90138310`. `bina_olayi` içindeki `bina_id` ile aynı |
+| `yukseklik_m` | sayı ≥ 0 | Metre |
+| `kat` | tam sayı ya da boş | Biliniyorsa kat sayısı |
+| `yukseklik_kaynak` | `"osm_yukseklik"` / `"osm_kat"` / `"tahmin"` | Yüksekliğin nereden geldiği |
+| `adres` | metin ya da boş | |
+| `ad` | metin ya da boş | Bina adı, ör. okul adı |
+| `tur` | metin ya da boş | OSM `building` değeri, ör. `apartments` |
+
+```json
+{"type": "FeatureCollection", "kaynak": "OpenStreetMap katkicilari, ODbL", "features": [
+  {"type": "Feature",
+   "geometry": {"type": "Polygon", "coordinates": [[[34.824229, 39.8251225], [34.8240327, 39.825255], [34.8241635, 39.8253509], [34.824229, 39.8251225]]]},
+   "properties": {"id": "w90138310", "yukseklik_m": 12.0, "kat": 4, "yukseklik_kaynak": "tahmin", "adres": null, "ad": null, "tur": "apartments"}}
+]}
+```
+
+## Bina hasar olayı (kamera → bilgisayar)
+
+Kamera direği gibi bir kaynak binanın durumunu değiştirdiğinde `POST /api/bina`
+ile gönderilir. `hasarli` ve `yikik` kuyrukta vaka açar (`yikik` öncelik 1,
+`hasarli` 2); aynı binanın sonraki olayları yeni vaka yerine aynı vakayı günceller.
+`normal` vaka açmaz, yalnızca binanın haritadaki rengini varsayılana döndürür.
+
+| Alan | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `bina_id` | metin | evet | `bina.schema.json` içindeki `id` |
+| `durum` | `"hasarli"` / `"yikik"` / `"normal"` | evet | |
+| `guven` | sayı, 0–1 | evet | Hasar sınıfının güven skoru |
+| `gorunurluk` | sayı, 0–1 | evet | Binanın kameradan görünen oranı |
+| `kaynak` | metin | evet | Olayı üreten cihaz, ör. `direk1` |
+| `zaman` | ISO 8601 | evet | Tespit anı |
+
+```json
+{"bina_id": "w90138310", "durum": "yikik", "guven": 0.87, "gorunurluk": 0.7,
+ "kaynak": "direk1", "zaman": "2026-10-29T14:03:20+03:00"}
+```
+
+Şu anki `data/binalar.geojson` Yozgat merkez binalarıdır (OpenStreetMap
+katkıcıları, ODbL).
 
 ## Senaryo (İnşaat → bilgisayar)
 

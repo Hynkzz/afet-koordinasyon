@@ -145,6 +145,7 @@ protomapsL.leafletLayer({
 }).addTo(harita);
 harita.attributionControl.setPrefix("Leaflet");
 const katman = {
+  bina: L.geoJSON(null, { style: (f) => binaStili(f.properties.id), onEachFeature: binaKatmanla }).addTo(harita),
   siginak: L.layerGroup().addTo(harita),
   mesaj: L.layerGroup().addTo(harita),
   // Renk yalnizca uyari-kritik araliginda: yogunluk = bekleyen vaka.
@@ -154,6 +155,7 @@ const katman = {
   sensor: L.layerGroup().addTo(harita),
 };
 L.control.layers(null, {
+  "Binalar": katman.bina,
   "Sığınaklar": katman.siginak,
   "Mesajlar ve SOS": katman.mesaj,
   "Isı haritası (açık vakalar)": katman.isi,
@@ -183,6 +185,53 @@ fetch("/api/dugumler")
       }
     }
   });
+
+// --- Binalar ---
+const binaKatmanlari = new Map();
+const binaDurumlari = new Map();
+const BINA_DURUM = { yikik: "Yıkık", hasarli: "Hasarlı", normal: "Normal" };
+
+function sayiYaz(x) {
+  return x.toFixed(2).replace(".", ",");
+}
+
+function binaStili(id) {
+  // Renk durumu anlatir: yikik kirmizi, hasarli turuncu, digerleri gri.
+  const durum = binaDurumlari.get(id)?.durum;
+  if (durum === "yikik") return { color: renk.kritik, weight: 1, fillColor: renk.kritik, fillOpacity: 0.35 };
+  if (durum === "hasarli") return { color: renk.uyari, weight: 1, fillColor: renk.uyari, fillOpacity: 0.3 };
+  return { color: renk.notr, weight: 1, fillColor: renk.notr, fillOpacity: 0.08 };
+}
+
+function binaKatmanla(f, katman) {
+  const p = f.properties;
+  binaKatmanlari.set(p.id, katman);
+  katman.bindPopup(() => binaPopup(p));
+}
+
+function binaPopup(p) {
+  const olay = binaDurumlari.get(p.id);
+  return popup([
+    [p.ad || "Bina " + p.id],
+    [null, p.adres || "adres yok"],
+    [null, "Yükseklik: " + p.yukseklik_m + " m (" + p.yukseklik_kaynak + ")"],
+    [null, olay ? "Durum: " + BINA_DURUM[olay.durum] + " · güven " + sayiYaz(olay.guven) : "Durum: bilinmiyor"],
+  ]);
+}
+
+function binaGuncelle(olay) {
+  // Katman henuz yuklenmediyse durum saklanir; binaStili yuklenince onu kullanir.
+  binaDurumlari.set(olay.bina_id, olay);
+  const k = binaKatmanlari.get(olay.bina_id);
+  if (!k) return;
+  k.setStyle(binaStili(olay.bina_id));
+  if (olay.durum !== "normal") k.bringToFront();
+}
+
+fetch("/api/binalar")
+  .then((c) => c.json())
+  .then((veri) => katman.bina.addData(veri));
+
 let mesajNoktasi = 0;
 
 function popup(satirlar) {
@@ -430,6 +479,7 @@ let kuyrukBekliyor = false;
 function vakaKaynagi(v) {
   if (v.kaynak === "olay") return v.veri.kaynak === "kamera" ? "Kamera" : "Mikrofon";
   if (v.kaynak === "mesaj") return "Düğüm " + v.veri.kaynak;
+  if (v.kaynak === "bina") return "Direk " + v.veri.kaynak;
   return "Portal " + v.id;
 }
 
@@ -440,6 +490,9 @@ function vakaOzeti(v) {
       v.veri.en_yuksek_guven.toFixed(2) + " · son " + saatYaz(v.veri.son_olay.zaman);
   }
   if (v.kaynak === "mesaj") return "SOS: " + v.veri.yuk;
+  if (v.kaynak === "bina")
+    return BINA_DURUM[v.veri.durum] + " · " + (v.veri.adres || "Bina " + v.veri.bina_id) + " · güven " +
+      sayiYaz(v.veri.guven) + " · görünür %" + Math.round(v.veri.gorunurluk * 100);
   return portalOzet(v.veri);
 }
 
@@ -490,6 +543,7 @@ function kuyrukCiz() {
 
 function vakaAl(v) {
   vakalar.set(v.id, v);
+  if (v.kaynak === "bina") binaGuncelle(v.veri);
   // Saniyede onlarca guncelleme gelebilir; tabloyu kare basina bir kez kur.
   if (!kuyrukBekliyor) {
     kuyrukBekliyor = true;
@@ -649,6 +703,7 @@ let bekleme = 1000;
 function paketAl({ tip, veri, alindi }) {
   if (tip === "olay") olayAl(veri, !alindi);
   else if (tip === "mesaj") mesajAl(veri, alindi);
+  else if (tip === "bina") binaGuncelle(veri);
   else if (tip === "sinyal") sinyaller.set(veri.dugum_id, veri);
   else if (tip === "portal") portalAl(veri);
   else if (tip === "rapor") raporAl(veri);

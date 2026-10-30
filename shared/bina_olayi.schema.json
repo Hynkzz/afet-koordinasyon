@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bina_olayi.schema.json",
+  "title": "Bina hasar olayi",
+  "description": "Disaridan gelen bina hasar bildirimi (kamera diregi vb.). Panelde bina katmaninin rengini ve kuyruktaki vakasini gunceller.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["bina_id", "durum", "guven", "gorunurluk", "kaynak", "zaman"],
+  "properties": {
+    "bina_id": { "description": "bina.schema.json'daki properties.id ile ayni.", "type": "string", "minLength": 1, "maxLength": 64 },
+    "durum": { "description": "\"hasarli\" ve \"yikik\" kuyrukta vaka acar; \"normal\" yalnizca rengi sifirlar.", "enum": ["hasarli", "yikik", "normal"] },
+    "guven": { "description": "Hasar sinifinin guven skoru.", "type": "number", "minimum": 0, "maximum": 1 },
+    "gorunurluk": { "description": "Binanin kameradan gorunen orani.", "type": "number", "minimum": 0, "maximum": 1 },
+    "kaynak": { "description": "Olayi ureten cihaz, or. \"direk1\".", "type": "string", "minLength": 1, "maxLength": 32 },
+    "zaman": { "type": "string", "format": "date-time" }
+  },
+  "examples": [
+    {
+      "bina_id": "w90138310",
+      "durum": "yikik",
+      "guven": 0.87,
+      "gorunurluk": 0.7,
+      "kaynak": "direk1",
+      "zaman": "2026-10-29T14:03:20+03:00"
+    }
+  ]
+}

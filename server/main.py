@@ -20,7 +20,7 @@ from server import senaryo as senaryo_modulu
 from server.crypto import GecersizPaket, Sifreleyici, psk_oku
 from server.db import Vakalar
 from server.kanal import KANALLAR, Kanallar
-from server.models import Dugumler, DurumIstek, KameraKaresi, KanalIstek, SenaryoIstek, Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
+from server.models import BinaOlayi, Binalar, Dugumler, DurumIstek, KameraKaresi, KanalIstek, SenaryoIstek, Mesaj, MesajIstek, Olay, Paket, Siginaklar, Sinyal, Taslak
 from server.sources.mock import MockKaynak
 
 KOK = Path(__file__).resolve().parent.parent
@@ -138,6 +138,11 @@ async def omur(app: FastAPI):
     app.state.siginaklar = Siginaklar.model_validate_json((KOK / "data" / "siginaklar.geojson").read_text())
     log.info("%d siginak yuklendi", len(app.state.siginaklar.features))
     app.state.dugumler = Dugumler.model_validate_json((KOK / "data" / "dugumler.geojson").read_text())
+    bina_dosyasi = KOK / "data" / "binalar.geojson"
+    app.state.binalar = (Binalar.model_validate_json(bina_dosyasi.read_text()) if bina_dosyasi.exists()
+                         else Binalar(type="FeatureCollection", features=[]))
+    app.state.bina_sozluk = {f.properties.id: f for f in app.state.binalar.features}
+    log.info("%d bina yuklendi", len(app.state.binalar.features))
     global vakalar
     vakalar = Vakalar(os.environ.get("AFET_DB", KOK / "data" / "afet.db"))
     portal.yukle(vakalar)
@@ -190,6 +195,8 @@ def vaka_konumu(vaka: dict) -> dict | None:
     veri = vaka["veri"]
     if veri.get("gps"):
         return veri["gps"]
+    if vaka["kaynak"] == "bina":
+        return veri.get("merkez")
     if vaka["kaynak"] == "mesaj":
         alan = "id"
     elif vaka["kaynak"] == "olay":
@@ -308,6 +315,11 @@ async def dugumler() -> Dugumler:
     return app.state.dugumler
 
 
+@app.get("/api/binalar")
+async def binalar() -> Binalar:
+    return app.state.binalar
+
+
 # Disa aktarilan dosya baska kurumlarla paylasilabilir; cihaz kimligi ve ad gibi kisisel alanlar cikarilir.
 DISA_AKTARILMAZ = {"cihaz", "ad"}
 
@@ -342,6 +354,23 @@ async def siginaklar() -> Siginaklar:
 @app.post("/api/olay")
 async def olay_al(olay: Olay) -> dict:
     return await olay_isle(olay)
+
+
+@app.post("/api/bina")
+async def bina_al(olay: BinaOlayi) -> dict:
+    bina = app.state.bina_sozluk.get(olay.bina_id)
+    if bina is None:
+        raise HTTPException(404, "bina yok")
+    # Merkez poligonun kose noktalarinin ortalamasi; kuyruktaki vakayi haritada nereye koyacagini belirler.
+    kose = bina.geometry.coordinates[0]
+    merkez = {"lat": sum(k[1] for k in kose) / len(kose), "lon": sum(k[0] for k in kose) / len(kose)}
+    p = bina.properties
+    veri = olay.model_dump(mode="json") | {"adres": p.adres, "ad": p.ad, "yukseklik_m": p.yukseklik_m, "merkez": merkez}
+    if olay.durum != "normal":
+        # Yikik en acil; ayni binanin tekrar gelen olayi ayni vakayi gunceller, durumu korunur.
+        await vaka_kaydet(f"bina-{olay.bina_id}", "bina", 1 if olay.durum == "yikik" else 2, veri)
+    await yayinci.yayinla("bina", veri)
+    return veri
 
 
 @app.post("/api/mesaj")
@@ -411,13 +440,29 @@ async def senaryo_kanal(ad: str, acik: bool):
     await yayinci.yayinla("kanallar", {"kanallar": kanallar.durum()})
 
 
+# Yalnizca benzetim: sanal direk kamerasi goruntuyu buna gore uretir. Panel ve tespit bunu okumaz.
+sim_yikik: set[str] = set()
+
+
+async def senaryo_bina(bina_id: str, durum: str):
+    if durum == "yikik":
+        sim_yikik.add(bina_id)
+    else:
+        sim_yikik.discard(bina_id)
+
+
+@app.get("/api/sim/binalar")
+async def sim_binalar() -> dict:
+    return {"yikik": sorted(sim_yikik)}
+
+
 def kaynagi_sustur(sessiz: bool):
     if app.state.kaynak:
         app.state.kaynak.sustur(sessiz)
 
 
 oynatici = senaryo_modulu.Oynatici(olay_isle, senaryo_mesaj, senaryo_portal, senaryo_kanal, yayinci.yayinla,
-                                   kaynagi_sustur)
+                                   kaynagi_sustur, senaryo_bina)
 
 
 @app.get("/api/senaryolar")
@@ -439,6 +484,7 @@ async def senaryo_baslat(istek: SenaryoIstek) -> dict:
         portal.kayitlar.clear()
         portal.son_cagri.clear()
         yayinci.son_yayinlar.clear()
+        sim_yikik.clear()
         yayinci.gecmis.clear()
         birlestirici._son.clear()
         log.info("Kuyruk ve portal kayitlari temizlendi")
