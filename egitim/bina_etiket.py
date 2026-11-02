@@ -11,6 +11,7 @@ Cikti: data/gercek/bina_etiket/<bolge>.geojson (damage_gra alani hasar_veri ile 
   ~/afet-yolo/venv/bin/python -m egitim.bina_etiket
 """
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -21,7 +22,7 @@ KOK = Path(__file__).resolve().parent.parent
 EMSR = KOK / "data" / "gercek" / "emsr"
 CIKTI = KOK / "data" / "gercek" / "bina_etiket"
 OSM = KOK / "data" / "gercek" / "hotosm" / "osm_hasar.json"
-OVERTURE = "overturemaps"
+OVERTURE = shutil.which("overturemaps") or "overturemaps"  # pip install overturemaps
 HASARLI = {"Destroyed", "Damaged"}
 
 
